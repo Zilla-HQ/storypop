@@ -61,17 +61,9 @@ export async function checkOptOut(args: {
     if (email.startsWith(prefix)) return { allowed: false, reason: `prefix ${prefix} (system mailbox)` };
   }
 
-  // Platform blacklist (populated by inbound unsubscribe replies)
-  const inBlacklist = await db
-    .select({ id: adminSettings.id })
-    .from(adminSettings)
-    .where(
-      sql`${adminSettings.id} = 1 and ${adminSettings.emailBlacklist} ? ${email}`,
-    )
-    .limit(1);
-  if (inBlacklist.length > 0) {
-    return { allowed: false, reason: "on platform unsubscribe blacklist" };
-  }
+  // Platform blacklist lives in the `email_blocklist` table (single source
+  // of truth) — StoryPop doesn't mirror it on admin_settings since
+  // marketing email is transactional + abandoned-cart only.
 
   // Stricter posture for CA / CO residents (CCPA / CPA)
   const strictState = args.state === "CA" || args.state === "CO";

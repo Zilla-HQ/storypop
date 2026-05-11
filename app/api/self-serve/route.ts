@@ -96,8 +96,12 @@ export async function POST(req: NextRequest) {
   });
 
   await Promise.allSettled([
-    trackEvent("book_request_submitted", { bookId, archetype: body.archetype }),
-    sendMetaEvent("InitiateCheckout", { bookId, eventId: body.eventId }),
+    trackEvent({
+      distinctId: bookId,
+      event: "book_request_submitted",
+      properties: { bookId, archetype: body.archetype },
+    }),
+    sendMetaEvent("InitiateCheckout", { bookId, eventId: body.eventId }).catch(() => {}),
   ]);
 
   return NextResponse.json({ bookId });

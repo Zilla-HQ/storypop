@@ -83,7 +83,7 @@ export async function lockCharacter(input: CharacterLockInput): Promise<Characte
 
   // Real call: fal.ai's LoRA-training endpoint. The exact model id depends
   // on which Flux variant we're on; resolved at runtime from env.
-  const trainModel = env("FAL_LORA_TRAIN_MODEL", "fal-ai/flux-lora-fast-training");
+  const trainModel = env("FAL_LORA_TRAIN_MODEL", "fal-ai/flux-lora-fast-training")!;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = (await fal.subscribe(trainModel, {
     input: {
@@ -125,7 +125,7 @@ export interface PageGenResult {
  * prompt on a moderation flag.
  */
 export async function generatePageIllustration(input: PageGenInput): Promise<PageGenResult> {
-  const baseModel = env("FAL_LORA_BASE_MODEL", "fal-ai/flux-lora");
+  const baseModel = env("FAL_LORA_BASE_MODEL", "fal-ai/flux-lora")!;
   const stylePrompt = STYLE_PRESETS[input.stylePreset];
   const prompt = [
     SAFETY_PREAMBLE,

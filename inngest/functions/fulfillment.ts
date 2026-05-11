@@ -86,7 +86,11 @@ export const fulfillment = inngest.createFunction(
           }),
         );
         const r2Key = `books/${book.id}/pages/${i}.png`;
-        await step.run(`upload-page-${i}`, () => uploadToR2(r2Key, result.imageUrl));
+        await step.run(`upload-page-${i}`, async () => {
+          const res = await fetch(result.imageUrl);
+          const buf = Buffer.from(await res.arrayBuffer());
+          await uploadToR2(r2Key, buf, "image/png");
+        });
       } catch (err) {
         if (err instanceof ContentSafetyError) {
           safetyFails++;
@@ -121,8 +125,12 @@ export const fulfillment = inngest.createFunction(
       const url = await signedR2Url(pdfR2Key, 7 * 24 * 60 * 60);
       await sendComplianceEmail({
         to: order.customerEmail ?? "",
+        fromDomain: "mail.storypop.shop",
         subject: `${book.childName}'s book is ready`,
-        html: pdfDeliveryHtml({ childName: book.childName as string, pdfUrl: url }),
+        mjml: pdfDeliveryMjml({ childName: book.childName as string, pdfUrl: url }),
+        text: pdfDeliveryText({ childName: book.childName as string, pdfUrl: url }),
+        listingId: book.id,
+        idempotencyKey: `pdf-${order.id}`,
       });
     } else {
       const lineItem: LuluLineItem =
@@ -147,14 +155,14 @@ export const fulfillment = inngest.createFunction(
     }
 
     await step.run("track-cost", () =>
-      trackAgentCost({
-        agent: "fulfillment",
-        listingId: book.id,
-        cents: (story.pages.length - previewPages.length) * 4,
-      }),
+      trackAgentCost("fulfillment", (story.pages.length - previewPages.length) * 4),
     );
     await step.run("track-event", () =>
-      trackEvent("order_fulfilled", { orderId, sku: sku.id }),
+      trackEvent({
+        distinctId: book.id,
+        event: "order_fulfilled",
+        properties: { orderId, sku: sku.id },
+      }),
     );
 
     return { fulfilled: true, sku: sku.id };
@@ -180,12 +188,20 @@ async function autoRefund(
   await step.run("notify-customer", async () => {
     await sendComplianceEmail({
       to: args.order.customerEmail ?? "",
+      fromDomain: "mail.storypop.shop",
       subject: `Refund issued — ${args.book.childName}'s book`,
-      html: `<p>Hi —</p><p>I tried twice to draw a page for ${args.book.childName}'s book and my safety filter blocked both versions. Rather than ship something I'm not proud of, I've issued a full refund.</p><p>If you'd like to try again with a different story idea, just visit storypop.shop/create. No charge until you see the new preview.</p><p>— Pip</p>`,
+      mjml: refundMjml(args.book.childName as string),
+      text: refundText(args.book.childName as string),
+      listingId: args.book.id,
+      idempotencyKey: `refund-${args.orderId}`,
     });
   });
   await step.run("track-event", () =>
-    trackEvent("order_auto_refunded", { orderId: args.orderId, reason: args.reason }),
+    trackEvent({
+      distinctId: args.book.id,
+      event: "order_auto_refunded",
+      properties: { orderId: args.orderId, reason: args.reason },
+    }),
   );
   return { autoRefunded: true, reason: args.reason };
 }
@@ -199,3 +215,49 @@ function pdfDeliveryHtml(args: { childName: string; pdfUrl: string }): string {
 }
 
 export { stripe };
+
+function pdfDeliveryMjml(args: { childName: string; pdfUrl: string }): string {
+  return `<mjml><mj-body><mj-section><mj-column><mj-text>
+<p>Hi —</p>
+<p>${args.childName}'s book is finished.</p>
+<p><a href="${args.pdfUrl}">Download the PDF</a> (link works for 7 days).</p>
+<p>If anything's off — a misspelled name, a page that doesn't feel right — reply to this email and I'll fix it.</p>
+<p>— Pip</p>
+</mj-text></mj-column></mj-section></mj-body></mjml>`;
+}
+
+function pdfDeliveryText(args: { childName: string; pdfUrl: string }): string {
+  return [
+    "Hi —",
+    "",
+    `${args.childName}'s book is finished.`,
+    "",
+    `Download the PDF: ${args.pdfUrl}`,
+    "(link works for 7 days)",
+    "",
+    "If anything's off — a misspelled name, a page that doesn't feel right — reply to this email and I'll fix it.",
+    "",
+    "— Pip",
+  ].join("\n");
+}
+
+function refundMjml(childName: string): string {
+  return `<mjml><mj-body><mj-section><mj-column><mj-text>
+<p>Hi —</p>
+<p>I tried twice to draw a page for ${childName}'s book and my safety filter blocked both versions. Rather than ship something I'm not proud of, I've issued a full refund.</p>
+<p>If you'd like to try again with a different story idea, just visit storypop.shop/create. No charge until you see the new preview.</p>
+<p>— Pip</p>
+</mj-text></mj-column></mj-section></mj-body></mjml>`;
+}
+
+function refundText(childName: string): string {
+  return [
+    "Hi —",
+    "",
+    `I tried twice to draw a page for ${childName}'s book and my safety filter blocked both versions. Rather than ship something I'm not proud of, I've issued a full refund.`,
+    "",
+    "If you'd like to try again with a different story idea, just visit storypop.shop/create. No charge until you see the new preview.",
+    "",
+    "— Pip",
+  ].join("\n");
+}

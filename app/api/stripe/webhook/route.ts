@@ -4,7 +4,7 @@ import { db, orders } from "@/db";
 import { eq } from "drizzle-orm";
 import { inngest } from "@/inngest/client";
 import { trackEvent } from "@/lib/posthog";
-import { sendMetaEvent } from "@/lib/meta";
+import { sendCapiEvent } from "@/lib/meta-capi";
 
 export const runtime = "nodejs";
 
@@ -58,18 +58,14 @@ export async function POST(req: NextRequest) {
         // Server-side conversion event to Meta — critical for ad attribution
         // since iOS 14+ regularly drops the client-side Pixel Purchase event.
         // event_id matches what the Pixel would have sent so Meta dedupes.
-        await sendMetaEvent({
+        await sendCapiEvent({
           eventName: "Purchase",
           eventId: `order_${orderId}`,
-          email: updated.customerEmail ?? undefined,
+          email: updated.customerEmail ?? null,
           value: updated.amountCents / 100,
           currency: "USD",
-          customData: {
-            content_ids: [updated.listingId],
-            content_type: "product",
-            order_id: orderId,
-            tier: updated.tier,
-          },
+          contentIds: [updated.listingId],
+          externalId: `order_${orderId}`,
         });
       }
       break;

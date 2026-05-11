@@ -103,7 +103,11 @@ export const generatePreview = inngest.createFunction(
           }),
         );
         const r2Key = `books/${bookId}/pages/${i}.png`;
-        await step.run(`upload-page-${i}`, () => uploadToR2(r2Key, result.imageUrl));
+        await step.run(`upload-page-${i}`, async () => {
+          const res = await fetch(result.imageUrl);
+          const buf = Buffer.from(await res.arrayBuffer());
+          await uploadToR2(r2Key, buf, "image/png");
+        });
         previewPages.push({ pageNumber: i, r2Key, flagged: result.flagged });
       } catch (err) {
         if (err instanceof ContentSafetyError) {
@@ -127,14 +131,14 @@ export const generatePreview = inngest.createFunction(
     });
 
     await step.run("track-cost", () =>
-      trackAgentCost({
-        agent: "preview",
-        listingId: bookId,
-        cents: character.estCostCents + 2 + FREE_PREVIEW_PAGES * 4,
-      }),
+      trackAgentCost("preview", character.estCostCents + 2 + FREE_PREVIEW_PAGES * 4),
     );
     await step.run("track-event", () =>
-      trackEvent("preview_ready", { bookId, previewId, pages: previewPages.length }),
+      trackEvent({
+        distinctId: bookId,
+        event: "preview_ready",
+        properties: { bookId, previewId, pages: previewPages.length },
+      }),
     );
     await step.sendEvent("emit-ready", {
       name: "preview/ready",
