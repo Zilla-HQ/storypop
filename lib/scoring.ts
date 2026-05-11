@@ -1,90 +1,94 @@
 /**
- * Heuristic score of the listing's *agent* value as a target for cold outreach.
- * Higher = worth emailing (active agent, meaningful price, non-team).
- * 1-5 scale. No external lookups — uses only a minimal input shape so it works
- * against both live DB rows and Inngest-serialized step returns (where Dates
- * are strings).
+ * "Scoring" in StoryPop's model isn't about ranking cold-outreach targets
+ * (we don't do cold outreach). It's about gating book-request quality so
+ * we don't burn fal.ai budget on garbage inputs.
+ *
+ * 1-5 scale. Higher = the form is well-filled-out and the (optional)
+ * uploaded photo is usable for character-lock.
  */
-export interface AgentScoringInput {
-  agentEmail?: string | null;
-  price: number;
-  dom?: number | null;
-  brokerage?: string | null;
+export interface BookScoringInput {
+  childName?: string | null;
+  childAge?: number | null;
+  pronouns?: string | null;
+  archetype?: string | null;
+  photoUrl?: string | null;
+  /** 0-1. Set by lib/vision.ts when a photo is uploaded. */
+  photoClarityScore?: number | null;
 }
 
-export function scoreAgentValue(listing: AgentScoringInput): { score: number; reason: string } {
+export function scoreBookRequest(input: BookScoringInput): {
+  score: number;
+  reason: string;
+  completeness: number;
+} {
   let score = 3;
   const reasons: string[] = [];
 
-  if (!listing.agentEmail) {
-    return { score: 1, reason: "No agent email on record" };
+  const hasName = Boolean(input.childName && input.childName.trim().length > 0);
+  const hasAge = typeof input.childAge === "number" && input.childAge >= 1 && input.childAge <= 12;
+  const hasArchetype = Boolean(input.archetype && input.archetype.trim().length > 0);
+  const hasPronouns = Boolean(input.pronouns);
+  const hasPhoto = Boolean(input.photoUrl);
+
+  const requiredFields = [hasName, hasAge, hasArchetype];
+  const optionalFields = [hasPronouns, hasPhoto];
+  const completeness =
+    (requiredFields.filter(Boolean).length / requiredFields.length) * 0.8 +
+    (optionalFields.filter(Boolean).length / optionalFields.length) * 0.2;
+
+  if (!hasName) reasons.push("missing name");
+  if (!hasAge) reasons.push("missing/invalid age");
+  if (!hasArchetype) reasons.push("missing archetype");
+
+  if (!hasName || !hasAge || !hasArchetype) {
+    return { score: 1, reason: reasons.join(", "), completeness };
   }
 
-  // Price tier
-  if (listing.price >= 75_000_000) {
-    score += 1;
-    reasons.push("luxury price");
-  } else if (listing.price < 30_000_000) {
-    score -= 1;
-    reasons.push("low price");
+  if (hasPronouns) {
+    score += 0.25;
   }
 
-  // Days on market — fresh listings are better targets
-  if (typeof listing.dom === "number") {
-    if (listing.dom <= 7) {
-      score += 0.5;
-      reasons.push("fresh listing");
-    } else if (listing.dom > 60) {
-      score -= 0.5;
-      reasons.push("stale listing");
+  if (hasPhoto) {
+    score += 0.5;
+    if (typeof input.photoClarityScore === "number") {
+      if (input.photoClarityScore < 0.3) {
+        score -= 1;
+        reasons.push("photo too blurry / no face detected");
+      } else if (input.photoClarityScore >= 0.7) {
+        score += 0.5;
+        reasons.push("clear photo");
+      }
     }
-  }
-
-  // Penalize team-ish brokerages (harder to reach decision-maker)
-  const brokerage = (listing.brokerage ?? "").toLowerCase();
-  if (brokerage.includes("team") || brokerage.includes("group")) {
-    score -= 0.5;
-    reasons.push("team brokerage");
+  } else {
+    reasons.push("no photo — using default character");
   }
 
   return {
     score: Math.max(1, Math.min(5, Number(score.toFixed(2)))),
-    reason: reasons.join(", ") || "default",
+    reason: reasons.join(", ") || "complete",
+    completeness: Number(completeness.toFixed(2)),
   };
 }
 
-export function computeTargetScore(args: {
-  photoScore: number;
-  agentValueScore: number;
-  priceCents: number;
-}): number {
-  // Target is inversely correlated with photo quality (bad photos = good target)
-  // and positively correlated with agent value.
-  const photoComponent = 5 - args.photoScore; // 0-4 range
-  const weighted = photoComponent * 0.6 + args.agentValueScore * 0.4;
-  return Number(weighted.toFixed(2));
-}
-
-// Scoring is OFF — every discovered listing qualifies. The data showed
-// >90% of Zillow MLS photos score 4.5-5.0 (Claude vision rates pro photos
-// uniformly high), so any photo-quality filter became an aggressive
-// rejection of basically everything. Volume now > precision; outreach.ts
-// still requires an agent_email before sending, so no-email listings drop
-// out naturally and only listings with a real recipient get cold-emailed.
-//
-// The photo + agent scores are still computed and stored on the row for
-// observability (you can sort /admin/listings by them), but isQualified
-// no longer gates on them.
 export const QUALIFICATION_THRESHOLDS = {
-  maxPhotoScore: Infinity,
-  minAgentValueScore: 0,
-  minPriceCents: 0,
+  minCompleteness: 0.8,
+  /** Photo clarity threshold below which we fall back to default character. */
+  minPhotoClarityScore: 0.3,
 } as const;
 
-export function isQualified(_args: {
-  photoScore: number;
-  agentValueScore: number;
-  priceCents: number;
+export function isQualified(args: {
+  completeness: number;
+  photoClarityScore?: number | null;
 }): { qualified: boolean; reason: string } {
-  return { qualified: true, reason: "all-qualified (scoring off)" };
+  if (args.completeness < QUALIFICATION_THRESHOLDS.minCompleteness) {
+    return {
+      qualified: false,
+      reason: `form incomplete (${Math.round(args.completeness * 100)}% < ${
+        QUALIFICATION_THRESHOLDS.minCompleteness * 100
+      }%)`,
+    };
+  }
+  // Low-clarity photo doesn't disqualify — we fall back to the default character.
+  // It just gets logged in book.qualificationReason for ops visibility.
+  return { qualified: true, reason: "qualified" };
 }
