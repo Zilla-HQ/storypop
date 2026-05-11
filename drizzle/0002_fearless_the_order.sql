@@ -1,0 +1,12 @@
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "fbp" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "fbc" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "fbclid" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "utm_source" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "utm_medium" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "utm_campaign" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "utm_term" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "utm_content" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "referrer" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "client_ip" text;--> statement-breakpoint
+ALTER TABLE "sitebeat"."audits" ADD COLUMN "client_ua" text;--> statement-breakpoint
+CREATE INDEX "audits_utm_source_idx" ON "sitebeat"."audits" USING btree ("utm_source");

@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Sitebeat — Free SEO Audit",
+  "short_name": "Sitebeat",
+  "description": "Run a free 13-point SEO audit on the current page in one click. Powered by Sitebeat.",
+  "version": "1.0.0",
+  "action": {
+    "default_title": "Run Sitebeat SEO audit on this page",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["activeTab"],
+  "host_permissions": ["https://sitebeat.com/*"]
+}
