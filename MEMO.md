@@ -1,58 +1,94 @@
-# Realscale: autonomous-merchant case study
+# StoryPop — founding memo
 
-| | |
-|--|--|
-| **Repo** | https://github.com/Zilla-HQ/realestate |
-| **Site** | https://realscale.app — agent funnel `/agents` · homeowner funnel `/renovate` |
-| **Admin** | https://realscale.app/admin (Clerk-gated) |
+## What StoryPop is
 
-## Questions
-## Responses
+StoryPop is an autonomous merchant that creates personalized illustrated children's books. Parent fills out a 4-field form ("Lily, age 5, she/her, bedtime archetype") and optionally uploads a photo of their kid. Within 5–8 minutes, StoryPop generates a 12–16 page custom story with that kid as the protagonist, illustrated end-to-end. Three pages are shown free in the preview; the rest gates behind a Stripe checkout. SKUs: instant PDF ($14.99), softcover ($29.99), hardcover ($44.99), gift bundle with plush ($69.99). Printed books fulfill through Lulu xPress.
 
-## Problem
-We need a real, revenue-producing merchant running on the Zilla platform to validate that the three-layer framework actually compounds. A spec or a prototype isn't enough — the merchant has to be cold-discovering customers, taking live payments, fulfilling, and surviving CAN-SPAM / NAR / TCPA constraints, all without a human sitting on the loop.
+## Why now
 
-## Proposal
-Build Realscale.app: an AI real-estate photo-enhancement merchant that runs as a fully autonomous business and will do everything legally permissible to generate revenue. Two funnels share one backend:
+Three things changed in the last 12 months that didn't exist before:
 
-- **Agents (paid)**: $89 standard / $138 + twilight / $149 rush. Cold cron scrapes Zillow + Redfin + Realtor every 6h, qualifies on photo-quality + agent-value scores, generates a free personalized preview, cold-emails the listing agent with the before/after, takes payment via Stripe, fulfills, delivers a watermarked ("Virtually Staged" per NAR) zip.
-- **Homeowners (free + referral)**: $0 — homeowner submits address; pool/solar/curb-appeal mockup runs over a Mapbox satellite tile; if they like it, Yelp Fusion picks the top-rated local contractors and we collect a referral fee.
+1. **Character lock-in works.** Flux LoRAs trained on a 3-shot of the kid's photo lock the character's features across 16 illustrations cheaply (~$0.18 per book). Two years ago, you needed manual artist consistency. Now it's an API call.
+2. **Picture-book-quality illustration is one-shot.** Nano Banana Pro + style-preamble produces page-quality picture-book illustrations that don't need hand re-rendering. Two years ago, every page needed an illustrator.
+3. **Print-on-demand has accessible APIs.** Lulu xPress submits a single book at a time programmatically with no minimums. Two years ago, you'd need 100+ books printed per run.
 
-Anyone who lands organically on realscale.app is funneled into the right loop within one click — `/agents` for "I sell homes", `/renovate` for "I own a home" — and reaches the same backend.
+These three together collapse a workflow that was unit-priced at $150–$500 per book (Wonderbly, Hooray Heroes) down to a marginal cost under $5 for the PDF tier.
 
-## What's running (APIs and what each does)
+## Who StoryPop is for
 
-**Platform services** — Vercel (hosting + DNS + auto-sync of Resend records); Supabase Postgres + Drizzle ORM; Inngest Cloud (durable workflow runtime, cron + event); Clerk (admin auth); PostHog (product analytics); Cloudflare R2 (object store for renders + delivery zips, S3-compatible).
+**Gifters.** Specifically:
+- Parents buying for their own kid for birthdays, holidays, big-moment occasions (first day of school, new sibling, lost tooth).
+- Grandparents buying for grandkids. (Highest AOV — skews hardcover + bundle.)
+- Aunts/uncles buying around birthdays.
+- Baby-shower invitees needing a not-cheap-but-not-cheesy gift.
 
-**Agent skills** — Apify (Zillow / Redfin / Realtor scrapers via REST, not SDK — apify-client's `proxy-agent` dep doesn't survive Vercel bundling); fal.ai FLUX.1 Kontext (image-to-image edit preserving source geometry, picked over nano-banana which kept inventing different rooms); Mapbox (geocoding + static satellite tile for pool/solar mockups); Anthropic Claude (Haiku for email drafting + reply triage; Sonnet vision for photo QC + sample validation); MJML + Sharp (email templating with auto-injected CAN-SPAM footer; SVG-overlay disclosure watermark); Archiver (zip generation).
+Not for: educators, classroom kits, libraries. Those are B2B and not v1.
 
-**Communications** — Resend (outbound email; verified `mail.realscale.app` subdomain with DKIM + SPF; inbound webhook for replies); ImprovMX (silent forwarder so `replies@realscale.app` lands in the operator inbox without exposing the operator's domain); Stripe (Checkout in live mode + signed webhook for `checkout.session.completed → orders/paid`); Yelp Fusion (contractor lookup by category + zip — keys live, matching agent partial).
+See [ICP_FRAMEWORK.md](ICP_FRAMEWORK.md) for the full audience targeting.
 
-**Configured but not yet active** — Lob (postcard mailer; test key wired, behind admin `mailer_enabled` flag, **needs a real return-to-sender address before it can mail**); Twilio (SMS only after explicit TCPA consent — keys saved but A2P 10DLC registration not done, so no SMS goes out yet).
+## Why StoryPop wins
 
-## What was manual vs autonomous
+1. **Speed.** 5–8 minutes from form to preview. Wonderbly takes 24 hours. The gifting moment is impulsive — the buyer wants to see the result before deciding.
+2. **Free preview.** 3 pages free. The buyer doesn't pay until they see the kid rendered well. This converts dramatically better than "trust us, you'll like it."
+3. **Marginal cost.** ~$1.04 per generated preview. Wonderbly's wholesale cost per book is closer to $15. StoryPop can spend more on Meta ads per acquisition because the back-end economics are 10× better.
+4. **Print-on-demand without inventory.** Lulu prints book-by-book. Zero inventory risk, zero warehousing. The unit economics scale linearly without working-capital pressure.
+5. **Brand voice through Pip.** A named maker persona (see [PERSONA.md](PERSONA.md)) makes the gift feel hand-made even though production is automated.
 
-**Required a human (one-time)** — buying realscale.app and pointing DNS at Vercel; pasting each provider's API key into Vercel; clicking "Verify domain" in Resend after Vercel-Resend auto-added the DKIM/SPF records; flipping Stripe to live mode and creating the webhook endpoint; allow-listing the operator email in Clerk; updating `senderDomains` in admin settings to `["mail.realscale.app"]`.
+## How StoryPop makes money
 
-**Runs without a human** — 6-hour discovery cron → photo-vision qualification → preview generation → cold email with personalized before/after → 72h follow-up with discount code → inbound reply classification (unsubscribe / price / style / decline / complex) → auto-reply for the easy ones, flag-for-human for complex; post-payment: fulfillment fans out per-photo edits with QC retries, watermarks, zips, emails delivery; every send writes to `outreach_events` with open/click/reply tracking via Resend webhook.
+| SKU | Price | Marginal cost | Gross margin |
+|---|---|---|---|
+| Instant PDF | $14.99 | ~$1.04 (gen) | ~$13.95 |
+| Softcover | $29.99 | ~$1.04 + ~$5.50 (Lulu print + ship) = $6.54 | ~$23.45 |
+| Hardcover | $44.99 | ~$1.04 + ~$10.50 (Lulu print + ship) = $11.54 | ~$33.45 |
+| Gift bundle | $69.99 | ~$1.04 + $10.50 + ~$14 (Printful plush + ship) = $25.54 | ~$44.45 |
 
-## Admin dashboard
-`/admin` surfaces: a 15-item readiness checklist (every env var + flag the autonomous loop touches); listings with qualification scores; **outreach with full email body, opened-at, clicked-at, replied-at, plus a per-listing thread view that merges cold sends, follow-ups, inbound replies, and auto-replies**; a contacts directory (every realtor and every homeowner contacted, with sent/opened/clicked/replied roll-ups); orders + postcard previews + lead capture + settings.
+Blended AOV target: $35. Blended gross margin target: $27 (~77%).
 
-## What's enabled now vs what to add
-**On now** — discovery, qualification, preview, agent cold outreach, follow-up, reply triage, Stripe payments, fulfillment + delivery, admin email log.
-**Add next** — Yelp matching agent (lib done, Inngest function not wired); contractor portal + Stripe Connect for referral payouts; Lob postcard send (after return-address); Twilio SMS (after A2P registration); Vercel Ads / Meta paid acquisition layer to compound on top of cold + organic.
+Stripe + Meta CPMs: at $7 blended CAC, contribution margin is ~$20/book. Comfortable.
 
-A worth-considering platform add: **Vercel Inngest integration as a first-class platform service** — every Zilla merchant will need durable workflows with retries, crons, fan-out, and step-level idempotency, and Inngest already auto-syncs functions on Vercel deploy. Standardize on it instead of letting each merchant pick its own.
+## Targets
 
-## Why
-Realscale exercises every primitive a future merchant will need (input capture, gated checkout, hosted artifact, customer inbox, recipient inbox), every agent skill (scrape, generate-image, write-copy, fill-template, send-email, verify-artifact), and every platform service (hosting, scheduler, payments, sender reputation, observability). When the next merchant ships, the question isn't "what do we build" but "which primitives do we re-wire."
+- **Day 30**: 50 books shipped, primarily off Meta cold traffic. $1,750 revenue.
+- **Day 90**: 500 books shipped. $17,500 revenue. ROAS at 2.0+. First viral TikTok demo. Lookalike audience based on the first 100 purchasers.
+- **Day 180**: 2,000 books shipped. $70,000 revenue. Lulu account graduated to bulk pricing; Q4 ramp begins.
+- **Q4 (Oct–Dec)**: 8,000 books shipped Q4 alone. $280,000 Q4 revenue. Holiday/birthday demand is 4× a normal month.
+- **Day 365**: 15,000 books cumulative. $525,000 revenue. ~3% AOV bundle attach rate. 5–7% repeat purchase rate (mostly siblings of original kid).
 
-It also stress-tests the autonomous-revenue claim under real legal pressure: CAN-SPAM forces verified sender + physical-address footer + one-click unsubscribe; NAR forces a stamped "Virtually Staged" disclosure on every delivered photo; TCPA forces SMS-only-after-consent. The merchant can't ship if the platform can't enforce these for every future merchant by default.
+These are targets. The unknowns: viral TikTok coefficient (could be huge or zero), Q4 CPM survival (Meta CPMs spike 50–80% mid-November), and refund rate on character-mismatch (target <2% — every additional point costs ~$1.50 per book).
 
-## What can go wrong
-Cold outreach gets the sender domain throttled or block-listed — `mail.realscale.app` is verified but reputation is built per-domain, and one bad send (footer misconfig, broken unsubscribe, looking too templated) damages every future merchant on the same parent domain. Mitigation: per-merchant subdomains, list hygiene, and the readiness checklist.
+## Risks
 
-The contractor side fails to monetize — Yelp gives us search but no payouts; without Stripe Connect + a contractor-facing portal, every "free" homeowner mockup is a cost center, not revenue. Mitigation: ship the matching agent + payout rails next, gate homeowner generation on a contractor-side fee model, or add a low-priced add-on.
+1. **Character mismatch refunds.** The photo-to-LoRA pipeline sometimes drifts (wrong hair, off ethnicity). Target: <2% refund rate. Mitigation: retry-on-flag in `lib/falai.ts`, and an explicit "the character doesn't look like my kid" refund auto-trigger.
+2. **Content safety failures.** If a parent's archetype request slips a brand character (Disney, Marvel, etc.) past the safety gate, we ship a potentially-infringing book. Mitigation: hardcoded deny list in `lib/claude.ts:storySafetyGate`, plus the fal.ai NSFW filter, plus operator review for first 100 books and any flagged prompts.
+3. **COPPA and kid-photo handling.** The buyer is the parent; we never sell to kids; photos auto-purge in 30 days. Mitigation: documented in privacy policy, enforced by `inngest/functions/photo-purge.ts`, audited monthly.
+4. **Meta ad-account suspension.** Kid-focused creative + photo-of-children-in-ads sometimes triggers Meta's automated reviewers. Mitigation: never use real customer photos in ads; use stock illustrations + the StoryPop sample books. Pre-flight every creative through Meta's policy linter. Account lives under Zilla BM `1952475115474490` so it inherits BM trust.
+5. **Lulu print failures or shipping delays.** Q4 is brutal for print partners. Mitigation: 7–10 day stated lead times with buffer; auto-email customer if shipping crosses day 10.
+6. **Race / ethnicity rendering.** Default characters in fal.ai's base model skew white/Western. Without the LoRA character-lock, books for non-white kids without uploaded photos can render poorly. Mitigation: the form ask for skin/hair color when no photo provided. Document this design choice in the public diary so we own the choice, not stumble into it.
 
-The "wiring existing primitives" thesis breaks on per-vertical compliance — NAR for real estate, FINRA for advisors, HIPAA for medical, FTC for affiliate. Each is platform-level, not merchant-level, and pretending otherwise will make the second merchant rebuild the first merchant's compliance plumbing.
+## What StoryPop is not
+
+- **Not a publishing platform.** Parents don't get to author their own stories; the AI writes them, gated to age-appropriate archetypes.
+- **Not a classroom tool.** No bulk pricing, no teacher discounts. B2C only.
+- **Not licensable IP.** We don't license existing characters (Disney, Marvel, Bluey, etc.) and we never will. Hardcoded refusal.
+- **Not a print shop.** Lulu does the printing; we don't try to scale a fulfillment center.
+
+## How this fits inside Zilla
+
+StoryPop is the **second merchant** built on `Zilla-HQ/merchant-template` (after Relist). The platform-level work — auth, payments, scheduling, compliance, admin, the preview-checkout flow — is inherited. The biggest deltas StoryPop introduces:
+
+- A non-scraping discovery model (B2C, paid ads).
+- A print-fulfillment provider interface (Lulu → mirroring the staging-API swappability pattern in the template).
+- A photo-retention + auto-purge cron (other gen-image merchants will need this).
+
+StoryPop shares Zilla's Meta Business Manager (`1952475115474490`). The ad account is provisioned by Zilla; StoryPop reimburses spend per the Option-A billing model. See [ZILLA_HQ_SETUP_META.md](ZILLA_HQ_SETUP_META.md).
+
+## Open decisions
+
+These get answered in the first 90 days:
+
+1. **Free-tier pages: 3 vs 4 vs 5.** More free pages = higher landing-page conversion, more free generation cost. Three is the default; A/B test 4 in week 6.
+2. **TikTok organic content cadence.** No UGC (founder won't record). Stock-illustration demos + screen recordings of the create-flow + AI-narrated samples. Test 3 posts/week for 4 weeks. (See [AD_CREATIVES.md](AD_CREATIVES.md).)
+3. **Gift-bundle SKU activation.** Plush sourcing through Printful adds operational complexity. Launch with PDF/softcover/hardcover; add bundle in week 8 only if AOV trends justify it.
+4. **Subscription / book club tier.** A potential "one book a quarter for $39" subscription tier. Don't build it until 1,000 single-purchase customers prove the LTV math.
+5. **International shipping.** Lulu prints in EU + AU. Worth adding once US monthly volume passes 500 books to avoid pre-mature ops complexity.

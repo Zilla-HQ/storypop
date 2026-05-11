@@ -1,157 +1,119 @@
-# Launch day — HN / Product Hunt / Reddit playbook
+# StoryPop — launch playbook
 
-The single most asymmetric day in a new merchant's life is launch. A successful Show HN or PH top-5 can deliver weeks of paid-ad spend in 24 hours. A botched one tanks momentum and burns the only "first announcement" you ever get.
-
-This is the runbook that worked for the reference [Sitebeat](https://github.com/Zilla-HQ/sitebeat) merchant. The templates are copy-pasteable; the tactics generalize to any merchant.
-
-> **Important constraint**: launch submissions must come from a human account, not the autonomous loop. HN, PH, and Reddit all flag-detect bots. The operator submits; the platform handles inbound traffic.
+StoryPop is a **paid-ads-driven B2C launch**, not a Show-HN / Product-Hunt-style launch. This doc captures the actual launch path: a 30-day pre-launch warm-up, a paid-ads phase, then SEO + organic compounding. The template's HN/PH content can be reused if/when we want to publish a "how StoryPop was built" piece — but that's a separate moment from the product launch itself.
 
 ---
 
-## Order of operations
+## Phase 0 — pre-launch (3–4 weeks)
 
-The 3 surfaces don't compete — they reach different audiences and reinforce each other. Stagger them so you have hands free for each:
+1. **Ship the production site at storypop.shop with all 6 sample books visible** (`/samples`). Until samples are visible, no ads run.
+2. **Generate 50 hand-curated sample preview books** for staff/friends, real kids, real photos. Use the operator dashboard to manually rerun any pages that come out below the bar. The point is to calibrate the bar — what's "good enough to ship"?
+3. **Meta + TikTok pixel + CAPI fired correctly.** Test events from prod with Meta's Event Manager Test Events view. Without this, the first $1k of spend is wasted.
+4. **Stripe Tax configured + a few real tax IDs in the system** so the first real order doesn't blow up on a state-specific tax issue.
+5. **Lulu print-job successfully fulfilled end-to-end at least once** — a single hardcover ordered through the live site and physically delivered. Take a photo when it arrives.
+6. **Write Pip's first 3 diary entries** by hand (see [PERSONA.md](PERSONA.md)). These set the tone for everything downstream.
+7. **First creative batch ready** — 5 Meta-spec videos + 5 carousels + 5 statics. See [AD_CREATIVES.md](AD_CREATIVES.md) for the brief. No UGC (founder won't record).
 
-1. **Show HN** — Tuesday/Wednesday/Thursday, 8–10 PM Pacific (catches US evening + EU/AU morning).
-2. **Product Hunt** — schedule the listing the night before, fire at 12:01 AM Pacific the next day. PH ranks by upvote velocity over a single calendar day, so you want a full 24-hour window.
-3. **Reddit (r/SaaS or vertical sub)** — any time the same week. Read the sidebar twice. r/SEO, r/realestate, r/Entrepreneur all have aggressive mods.
-
----
-
-## 1. Show HN
-
-URL: <https://news.ycombinator.com/submit>
-
-### Title format
-
-Keep it short and honest. HN strips marketing language and will tank you for hype words. The "I built X that does Y" pattern works:
-
-```
-Show HN: <Merchant> – I built <thing> that <does specific thing>
-```
-
-Bad: `Show HN: <Merchant> – AI-powered, autonomous, next-generation X for Y`
-Good: `Show HN: <Merchant> – I built an SEO monitor that emails only when something regresses`
-
-### Body text
-
-Optional — HN posters sometimes submit a URL with no text. A thoughtful 200-300-word intro lifts engagement. Structure:
-
-1. **The job-to-be-done** (1 paragraph) — what existing tools fail at. Specific, not generic.
-2. **What the merchant does** (1 paragraph) — concrete features, no marketing voice.
-3. **Pricing + stack** (1 sentence each) — HN wants to know if you can build it and run it.
-4. **3 questions you'd love feedback on** — gives commenters a hook. People love being asked their opinion.
-
-End with the bare URL on its own line.
-
-### Tactics
-
-- Submit between **8–10 PM Pacific** (catches both US Pacific evening and AU/EU morning).
-- **First-hour activity matters**. Refresh the page; comment on adjacent posts to stay visible.
-- **Don't ask friends to upvote.** HN flag-detects ring voting and will silently dead-list your post.
-- **Be present in the thread for 4–6 hours after posting.** Reply to every comment. That's the signal HN ranks on.
-- **Don't post the same URL twice.** If a Show HN flops, change the URL (e.g. `?ref=hn-v2`) before trying again. Better: use a backup surface.
-
-### Expected outcome
-
-If it gains traction: 500–3000 visits in 24h. Conversion expectation: 1–3% to paid trial = 5–90 trials, of which 30–50% convert at end of trial = 1–45 customers.
-
-If it flops (most do): ~50 visits, no comments. Pivot to PH the next morning.
+Exit criteria for Phase 0: site live, samples live, first real Lulu print received, Pixel + CAPI verified, first 15 creatives queued in Ads Manager.
 
 ---
 
-## 2. Product Hunt
+## Phase 1 — paid traffic, calibrate (weeks 1–4 of launch)
 
-URL: <https://www.producthunt.com/products/new>
+The goal: **first 100 purchases**, mostly off cold Meta traffic.
 
-### Schedule, don't fire
+### Channel mix
 
-PH submissions are scheduled, not instant. Submit the listing **the night before**, schedule it for **12:01 AM Pacific** the next morning. PH ranks by upvote velocity in the first 6 hours of a single calendar day, so you want a full 24-hour window.
+1. **Meta Ads (Facebook + Instagram)** — $100/day starting budget, scale to $300/day by week 3 if ROAS holds above 1.5.
+   - 3 ad sets to start: lookalike-stub (broad), interest-stack (mom-blog + gift-personalized + picture-book), and Reels auto-placement.
+   - 5 ad creatives per set. Rotate weekly based on CTR.
+2. **TikTok Ads** — $25/day, mostly auto-targeting. Test 5 demo-style videos. No UGC.
+3. **Friends + family soft launch** — 100 personal DMs in week 1. The goal is reviews + word-of-mouth, not direct revenue. Discount code `LAUNCH50` (50% off, capped at 100 redemptions) to early supporters.
 
-### Listing fields
+### Don't run
 
-- **Tagline** (60-char limit): one concrete sentence about the merchant's hook.
-- **Description** (~600 chars): same JTBD framing as the Show HN body. Skip pricing — PH visitors expect a CTA, not a quote.
-- **First comment** (post as a comment on your own launch within the first hour): the longer "maker's note." This is where you ask for feedback on the 3 specific questions.
+- Google Search ads. CPCs against Wonderbly + Hooray Heroes are $3–8. Bad math.
+- Reddit + X. Not the audience.
 
-### Tactics
+### What to measure
 
-- **Tag 3–5 makers as "hunters"** in your launch (PH lets you credit collaborators). Doesn't need to be famous — just engaged.
-- **DM 10–20 PH friends in the 48 hours before** — ask them to drop in on launch day, not for an upvote. PH penalizes upvote requests.
-- **Reply to every comment within 30 min** during peak hours (6 AM–4 PM Pacific).
-- **Don't post in PH's Slack/Discord asking for votes** — it gets you flagged and possibly removed.
+| Metric | Week-4 target |
+|---|---|
+| Total purchases | >100 |
+| Blended ROAS | >1.5 |
+| Preview-to-purchase | >8% |
+| Refund rate | <3% |
+| AOV | >$25 |
 
-### Expected outcome
+If ROAS is below 1.0 at week 2: pause spend. The fix is creative, not budget.
 
-Top 5 product of the day → 200–800 visits. Top 10 → ~150–400. Trial conversion ~5–15% (PH audience is high-intent makers + indie hackers).
+### What to publish
 
----
-
-## 3. Reddit launch post
-
-Pick the most-relevant subreddit for your merchant's vertical. Read its sidebar twice. Sidebar rules override everything below.
-
-### Subreddit selection by vertical
-
-- **SaaS / indie / dev merchants**: r/SaaS (140K), r/SideProject (200K), r/indiehackers (40K).
-- **SMB / local-business merchants**: r/smallbusiness (1.4M), r/Entrepreneur (3.6M).
-- **Vertical-specific** (best converting): the merchant's exact vertical. Examples: r/restaurateur, r/HVAC, r/Plumbing, r/Roofing, r/realestate, r/Landscaping. Smaller but every member is a buyer.
-- **Tool-curious**: r/Marketing, r/SEO, r/webdev. These are mostly other practitioners, not buyers — lower conversion but useful for indexing the discussion.
-
-### Post shape
-
-- **Title**: question or specific claim. **Not** a "we just launched" announcement (those get downvoted to oblivion on every subreddit larger than 100K).
-- **Body**: open with "Solo dev, built this over the last N weeks." Honesty buys credibility.
-- **List your features as a bullet list, not prose** — Reddit readers skim.
-- **End with 2–3 specific questions you'd love feedback on.**
-- **Drop the URL once, plain text**, no UTM. Reddit detects UTM-stuffed links.
-
-### Tactics
-
-- **Don't reply with marketing-y language to questions.** Mods watch for this.
-- **Be honest about what's missing.** "Yeah I don't do X yet" lands better than "we're working on it."
-- **If someone says it's a copy of an established product** — agree, point at the price/scope difference, move on. Defensive replies tank threads.
-- **r/SEO + similar** have a loose "Sundays only for self-promotion" rule. Tools with a free tier and no paywall are tolerated weekdays *if* framed as a tool share, not a sales pitch.
-
-### Expected outcome
-
-Modest in absolute traffic (50–500 visits) but high-intent. Reddit traffic also gets indexed and ranks for relevant queries — a successful r/SEO post can deliver organic traffic for years.
+- Pip's diary, weekly, every Friday morning. Real books that shipped this week, anonymized (no real kid names; "a kid named [archetype-typical name]") unless the parent shares publicly first.
+- TikTok organic 3×/week. Mix of AI-narrated demo-style + screen-recordings of the create flow.
+- No SEO blog posts yet. SEO content starts in Phase 2 once we have content that wasn't an ad.
 
 ---
 
-## Backup surfaces if any of the 3 flop
+## Phase 2 — scale + SEO compounding (weeks 5–12)
 
-- **Indie Hackers — Show & Tell**: <https://indiehackers.com/post>.
-- **r/SaaS** — friendlier than vertical-specific subs for SaaS launches.
-- **dev.to** — if Show HN flops, post a companion "I built X, here's the architecture" that links back.
-- **Hacker News /newest** — if the front page submission stalls within 30 minutes, drop the same URL in a comment on a related Ask HN ("what are you using for SEO monitoring?", etc.). Don't repost; the dupe-detector will catch it.
+If Phase 1 hits targets, scale spend to $1K/day blended (Meta + TikTok). Add Pinterest at $25/day as a Q4-prep test.
 
----
+New surfaces:
 
-## Tracking
+1. **`/for/[occasion]` programmatic SEO pages** — "personalized book for 5-year-old's birthday", "first-day-of-school gift book", "new baby brother book". 60–80 pages, each indexed.
+2. **`/samples/[archetype]` deep gallery pages** — one per archetype with 10+ preview books, optimized for "personalized [archetype] book" long-tail.
+3. **Email retention loop** — purchasers get a "what's next" email 30 days after delivery (sibling book? birthday next year?). Strict TCPA: no SMS yet without affirmative consent.
+4. **First "story behind the book" longform post** — Pip-voiced, ~1,500 words, about how the first 100 books got made. SEO-worthy + linkable.
 
-Use the **bare merchant URL** on every surface. No UTMs. Trackers like UTMs flag Reddit / PH posts as ads, and HN strips them. Your audit / lead-form table already captures `referrer` — that's enough attribution to see traction by source.
+### Exit criteria
 
-The exception: **paid Reddit Ads** (see REDDIT_ADS.md) — those use UTMs because they're not organic posts.
-
----
-
-## Day-after plan
-
-If you broke 500 visits on launch day, ride the wave:
-
-1. **Schedule a follow-up tweet thread** for the next morning — "Yesterday I launched X. Here are the 5 most common reactions I got."
-2. **Email your existing list** (if you have one) the next afternoon, not the same day. Use the launch as the news hook.
-3. **Pin the launch post** on the merchant's X account for 48h.
-
-If the launch flopped:
-
-1. **Don't repost the same URL.** HN, PH, and Reddit all dupe-detect.
-2. **Don't lower the price as a panic move.** Wait 2 weeks before any pricing change.
-3. **Pivot to paid acquisition** — Meta Ads (META_ADS.md) + Reddit Ads (REDDIT_ADS.md) — and use the launch URLs as control creatives.
+- 500 books shipped cumulative
+- Blended ROAS >2.0
+- Lookalike audience built off >100 real purchases
+- First organic SEO traffic (>500 visitors/mo from non-paid)
 
 ---
 
-## Reference templates
+## Phase 3 — Q4 ramp (mid-Oct to mid-Dec)
 
-The Sitebeat merchant published its actual launch posts at [`docs/launch-posts.md`](https://github.com/Zilla-HQ/sitebeat/blob/main/docs/launch-posts.md). Real copy from a real $29/mo SaaS launch — adapt the structure, replace the product specifics.
+Q4 is the year. Plan from week 30 onward:
+
+1. **Hold creative pipeline open from August.** Q4 needs 30+ fresh creatives to avoid Meta fatigue. Start producing in August.
+2. **Pre-warm a Black Friday audience** — start retargeting visitors from October on. They convert in November.
+3. **Scale spend 3–5× through the season.** Daily budget caps at $5K Meta + $1K TikTok by November 15. ROAS will dip from 2.0 to 1.3–1.7 — acceptable for the volume, painful for margins.
+4. **Print partner capacity check.** Confirm Lulu can handle the ramp. Have Printful as backup for hardcover SKU. Set "order by Dec 15 for Christmas delivery" cutoff hardcoded in `lib/lulu.ts:shippingCutoff`.
+5. **Gift card SKU**, if it's built — heavy promotion. Gift cards convert at 90% redemption inside 90 days and bridge the "I don't have the kid's photo at this moment" gap that kills gift-conversion otherwise.
+
+### Don't do during Q4
+
+- **No major site redesigns.** Q4 conversions on a tested funnel are sacred. Lock the funnel from October 1; ship only critical fixes.
+- **No new SKU launches.** The bundle SKU should be live by September if it's launching at all.
+
+---
+
+## What StoryPop does NOT do at launch
+
+- **No Product Hunt as a sales channel.** PH is fine for the "we built this" moment but doesn't convert kid-gift buyers. Maybe a week-of-launch PH post for Zilla-network visibility — not as a revenue driver.
+- **No Show HN.** Save it for "how we built it" content.
+- **No UGC creator program.** Founder won't record; no creator program in v1. (Possibly in Phase 3 if a parent organically posts their kid with the book and we want to amplify.)
+- **No influencer marketing.** Too expensive vs paid ads at v1 spend levels. Revisit when ROAS-fatigue forces us off cold paid.
+
+---
+
+## When something goes wrong
+
+- **Meta ad account suspension.** Almost certain to happen once. Mitigation: account lives under Zilla BM `1952475115474490` so it inherits BM trust. Backup ad account warmed under same BM, ready to flip. Don't appeal angry; appeal with calm, specific compliance evidence.
+- **Refund rate spikes above 5%.** Usually a character-mismatch issue (LoRA drifting). Pause generation, sample 20 recent flagged books, identify the failure mode, push a fix to `lib/falai.ts:lockCharacter`.
+- **Lulu print delays during Q4.** Communicate proactively. Email every order shipping late with a real apology and an option for a digital-PDF refund-credit of $14.99.
+- **Content-safety incident.** A book ships with disallowed content (branded character, violence, etc.) that slipped the gate. Pause generation immediately, audit `lib/claude.ts:storySafetyGate`, refund the customer, post-mortem in 24h.
+
+---
+
+## A note on which channels never make sense for StoryPop
+
+- **Cold outreach (the merchant template's default).** B2C consumer product; there's no list of "people who buy personalized kids books" to cold email. The discovery layer is deleted in this repo.
+- **LinkedIn ads.** No.
+- **B2B partnerships with schools/daycares in v1.** It's tempting (volume!) but the operational complexity (bulk discounts, invoicing, custom co-branding) sinks margin and distracts from the consumer flywheel. v2 maybe.
+
+The single non-negotiable: **the buyer is always the parent, never the kid.** Every channel choice respects that.

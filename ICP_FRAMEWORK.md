@@ -1,173 +1,113 @@
-# ICP framework — picking (and pivoting) cold-outreach targeting
+# StoryPop — ICP framework, filled in
 
-The single most expensive mistake in cold-outreach is targeting the wrong ICP. A 0% conversion rate over 50–100 sends isn't a copy problem — it's an ICP problem. This doc is the framework for choosing the initial ICP and pivoting when the data says you got it wrong.
+StoryPop is a **paid-ads-driven B2C product**, not a cold-outreach business. The "ICP framework" in the merchant template was built around cold outreach; for StoryPop, the analogous discipline is **audience targeting on Meta and TikTok**, plus the SEO and gift-discovery funnels.
 
-Patterns from the reference [Sitebeat](https://github.com/Zilla-HQ/sitebeat) merchant, which **pivoted ICPs after the first 92-email batch hit 0% paid conversion**. The lesson generalizes.
-
----
-
-## The four ICP filters
-
-A vertical earns cold-outreach budget only if it passes all four:
-
-### 1. Pricing tolerance
-
-Can the average business in this vertical afford the merchant's monthly fee without internal approval?
-
-- **At $29/mo**: any business owner can sign personally. Owner-led SMBs in profitable verticals pass.
-- **At $99/mo**: usually still owner-led, but margin-sensitive verticals (restaurants, low-end retail) start saying no.
-- **At $299+/mo**: needs a budget owner who isn't the founder. Don't cold-email; you need a sales motion.
-
-### 2. Marketing self-determination
-
-Does the prospect set their own marketing budget, or does corporate / a franchise / an agency?
-
-- **Self-determined**: 1-person professional services (lawyers, accountants, real-estate agents, designers, consultants), indie SaaS founders, agency owners, premium-trade contractors. **Yes.**
-- **Corporate-determined**: chain restaurants, franchisees, retail outlets of national brands. **No** — your email goes to a generic info@ that gets ignored.
-- **Agency-determined**: many SMBs delegate marketing entirely. **Maybe** — depends whether your offer beats what the agency does (in which case, recruit the agency directly; see PARTNERS.md).
-
-### 3. Pain visibility
-
-Does the prospect feel the pain your merchant solves directly and immediately, or is it abstract / delayed?
-
-- **Direct**: drop in inbound leads = drop in revenue = visible this month. Examples: lawyers tracking referral source, agencies whose clients fire them when traffic drops, indie SaaS founders watching their funnel daily.
-- **Abstract**: "good SEO is important" — true but not painful enough to trigger a $29 purchase from a cold email.
-
-Verticals where pain is *abstract* (most restaurants, salons, low-end retail) require either (a) much warmer outreach, or (b) a different hook.
-
-### 4. Communication channel fit
-
-Does this vertical actually check email at a rate that justifies cold outreach?
-
-- **Email-native**: SaaS founders, agencies, accountants, lawyers, consultants. Check email 3–10× / day.
-- **Email-occasional**: restaurants, salons, small retailers. Owner is on the floor, not at a laptop. Email is the worst channel; SMS / Instagram DM might work but TCPA-gated.
-- **Email-dead**: blue-collar trades that ran the same business for 20 years. Phone calls are the only path.
-
-If a vertical fails #4, the rest doesn't matter.
+This doc translates the four-filter framework to StoryPop's paid-ads context. Pattern reference: [Sitebeat](https://github.com/Zilla-HQ/sitebeat) shows what happens when you target the wrong audience — the lesson generalizes.
 
 ---
 
-## What Sitebeat learned
+## The four filters, applied to paid-ads audiences
 
-Sitebeat's first cold batch (92 emails) targeted restaurants + salons + fitness studios + hospitality + low-margin trade services. **Zero paid conversions.**
+### 1. Price tolerance
 
-Reasons:
+- **$14.99 PDF**: impulse-priced. Any parent on Meta/TikTok can buy on a Friday night. ✅
+- **$29.99 softcover**: still impulse-tier, especially for gifts. ✅
+- **$44.99 hardcover**: gift-priced. Aunt / grandparent buys. ✅
+- **$69.99 gift bundle**: birthday / Christmas / baby-shower priced. Still passes for gifters; not impulse. ✅
 
-- Restaurants care about **Google Maps + Instagram**, not the kind of regression alerts Sitebeat sends. SEO pain is abstract for them.
-- Salons are owner-on-the-floor businesses. The owner doesn't open laptop email mid-shift.
-- Low-margin trades (cleaning, basic plumbing) have $29/mo budget tolerance but don't perceive SEO pain — phone-call inbound is most of their volume.
+Pricing passes across all SKUs for the gifting use case.
 
-The pivot, May 2026: replaced the entire vertical list with **30 higher-margin verticals** where all four filters pass:
+### 2. Decision authority
 
-```
-# lib/discover/yelp-terms.ts (Sitebeat) — DEFAULT_YELP_TERMS
-# Marketing / web professionals — they get SEO, often pay, often refer clients
-- marketing agency
-- web design
-- digital marketing agency
-- seo consultant
-- branding agency
-- graphic designer
-# Accounting / financial — high $29/mo tolerance, paid websites
-- accountant
-- cpa
-- tax preparation
-- bookkeeping
-- financial advisor
-- insurance agency
-- wealth management
-# Legal — high revenue per case, sensitive to local-SEO regressions
-- law firm
-- personal injury lawyer
-- estate planning attorney
-- family law attorney
-# Health professionals — small private practices with their own websites
-- dentist
-- orthodontist
-- chiropractor
-- physical therapy
-- veterinarian
-- dermatologist
-- med spa
-- optometrist
-# Real estate professionals — own marketing budget, paid websites
-- real estate agent
-- real estate broker
-- mortgage broker
-- home inspector
-# Premium trades / specialty contractors (high-margin, not low-end)
-- interior designer
-- architect
-- general contractor
-- kitchen remodeling
-- bathroom remodeling
-- custom home builder
-# 1:1 service professionals with paid websites
-- business coach
-- executive coach
-- personal trainer
-- wedding photographer
-- commercial photographer
-```
+Who's actually buying?
 
-All 30 pass all 4 filters: self-determined budget, direct SEO pain, email-native, $29/mo trivial relative to revenue per customer.
+- **Parents (mom, primarily)**: self-determined. ✅
+- **Grandparents (gifters)**: self-determined. Highest AOV (skews toward hardcover + bundle). ✅
+- **Aunts/uncles (gifters)**: self-determined. Volume-driver around birthdays + holidays. ✅
+- **Kids themselves**: do not have the credit card. ❌ — and we wouldn't sell to them if they did. (See `app/(marketing)/disclosure/page.tsx` — COPPA stance.)
+
+### 3. Pain / motivation visibility
+
+This is "is the buyer in a buying mood when the ad hits."
+
+- **Pre-birthday window (-3 weeks to -3 days)**: very high intent. Best ROAS. ✅
+- **Pre-Christmas window (mid-Oct to Dec 15)**: highest volume of the year. Saturated, expensive CPMs, but converts. ✅
+- **Baby-shower / new-sibling moments**: triggered by life events. Lookalike + interest-targeting reaches well. ✅
+- **Bedtime / "what to read tonight" search intent**: low purchase intent at moment of search; better for SEO / content top-of-funnel than for paid ads. ⚠️
+- **General "kid stuff" browsing**: too diffuse, wasteful in v1. ❌
+
+### 4. Channel fit
+
+- **Meta (Facebook + Instagram)**: where parents are. Reels + carousel work. Lookalikes off purchasers convert hard once we have >50 purchases as a seed audience. ✅
+- **TikTok**: gift-discovery scrolling, especially around Q4 + birthday-week content. Short-form demo videos (NOT user-recorded UGC for StoryPop — see voice notes in [AD_CREATIVES.md](AD_CREATIVES.md)). ✅
+- **Google Search**: "personalized kids book" + "custom story for [name]" — small but high-intent volume. Best for SEO landing pages, not paid (CPC too high vs Meta). ⚠️
+- **Pinterest**: gift-discovery moment. Strong for hardcover + bundle. ✅ — secondary, test after Meta scales.
+- **Email**: only post-purchase + abandoned-cart. No cold list. ✅
 
 ---
 
-## Picking your starting ICP
+## StoryPop's ICP — filled-in table
 
-For a new merchant fork, before writing a single line of cold-email copy:
+| Filter | Mom-buyer (self) | Grandparent gifter | Aunt/uncle gifter | Baby-shower buyer |
+|---|---|---|---|---|
+| Price tolerance | $14.99–44.99 OK | $29.99–69.99 (prefers hardcover + bundle) | $29.99–69.99 | $44.99–69.99 |
+| Decision authority | Self | Self | Self | Self |
+| Pain / motivation window | Bedtime, birthday, "they're growing up so fast" | Birthday, Christmas, "I miss them" | Birthday, "good aunt energy" | Baby shower invite |
+| Channel fit | Meta Reels, TikTok | Meta feed + carousel | Meta Reels + Pinterest | Meta + Pinterest |
+| **Verdict** | **Primary — scale first** | **Highest-AOV — scale second** | **Volume in Q4 + birthday-month** | **Niche evergreen, run small** |
 
-1. **List 5–10 candidate verticals** the merchant's hook plausibly serves.
-2. **Run each through the 4 filters above.** Drop anyone failing #1 or #4 immediately — they'll waste outreach budget.
-3. **Pick the smallest one that passes all four.** Smaller subs have less competition for cold-email attention. r/HVAC (135K members) converts cold email at 3–5×; r/Entrepreneur (3.6M) at <1%.
-4. **Run 30–50 cold sends** to test. Reply rate (not just open rate) is the signal. **Below 3% replies in any vertical = you got the ICP wrong, pivot before sending more.**
+---
+
+## Targeting strategy v1
+
+**Meta (primary, ~80% of spend):**
+
+- **Audience 1 — Lookalike off purchasers** (post first 50 sales). Cold-best on day 30+.
+- **Audience 2 — Interest stack: "Mom blog" + "Picture book authors" + "Etsy gifting" + "Personalized gifts"** — interest mix that under-indexes on price-sensitive sub-audiences.
+- **Audience 3 — Engaged shoppers on Reels** (Meta's auto-targeting placement option, capped at $50/day).
+- **Audience 4 — Q4 gift seasonality lookalike** — reactivate in mid-October.
+
+**TikTok (secondary, ~15%):**
+
+- Auto-targeting bid; let the algo find the buyer. Demo-style videos (show pages turning, character matching the photo). No UGC.
+
+**Pinterest (5%, test):**
+
+- Gift-board boards. Run a single hardcover-bundle campaign at $25/day for 30 days; measure attributable conversions.
+
+**Don't run:**
+
+- Google Search ads above $1.50 CPC — CPCs are too high against entrenched competitors (Wonderbly, Hooray Heroes, IseeMe). Win on SEO instead.
+- Reddit / X — kid-gift purchases don't index here in v1.
 
 ---
 
 ## Pivot signals
 
-Pivot the ICP when:
+Pivot **audience**, not creative, when:
 
-- **0–1 paid conversions after 100+ cold sends** — even with perfect copy, no vertical converts below 0.5% over 100 sends. The problem isn't the funnel.
-- **High open rate, low reply rate** — your hook resonates but the audience isn't the buyer. The owner reads but doesn't have authority / budget.
-- **Replies are universally "what is this?" / "we already do this internally"** — your offer is either confusing or obvious to this vertical. Either way, wrong audience.
+- **ROAS < 1.5 after $1,000 spent on an audience** — kill that audience, reallocate to the next.
+- **High click-through, low purchase** — likely a landing-page or pricing problem (audit `/create` form completion rate). Don't blame audience yet.
+- **High purchase, low repeat** — that's fine for gifting; gifting is one-shot. Don't over-index on LTV models that assume subscription churn.
 
 **Don't pivot** when:
 
-- Reply rate is 3–8% but no conversions yet. The funnel is leaking elsewhere (email → landing page → checkout). Diagnose the leak before changing ICP.
-- A single replier complains. One angry email doesn't override the data.
+- ROAS dips in week 2 of a Q4 ramp — Q4 CPMs spike across the entire ecosystem. Hold the audience, lower the daily budget.
 
 ---
 
-## ICP per merchant pattern (the table)
+## Where this lives in code + config
 
-When you fork the template, fill this in for your merchant before launching cold outreach:
-
-| Filter | Your vertical-1 | Your vertical-2 | Your vertical-3 |
-|---|---|---|---|
-| Pricing tolerance ($29 / $99 / $299) | | | |
-| Marketing self-determination (self / corporate / agency) | | | |
-| Pain visibility (direct / abstract) | | | |
-| Channel fit (email-native / occasional / dead) | | | |
-| **Verdict** | Run / Drop / Test | Run / Drop / Test | Run / Drop / Test |
-
-Three verticals is enough for initial testing. Going wider before you have conversion data dilutes signal.
+- Meta audience definitions: `scripts/meta-create-lookalike.ts` + `scripts/meta-list-audiences.ts` (template scripts, repurposed)
+- Pixel + CAPI events: `lib/meta-capi.ts` (fires `ViewContent`, `InitiateCheckout`, `Purchase`)
+- TikTok events: extend `lib/meta-capi.ts` or add `lib/tiktok-events.ts`
+- Spend caps: env `META_DAILY_BUDGET_CENTS`, `TIKTOK_DAILY_BUDGET_CENTS`
 
 ---
 
-## Where this lives in code
+## Anti-ICP — audiences StoryPop should NOT target
 
-For merchants that use a Yelp-based discovery cron (matches `app/api/cron/discover/route.ts` in Sitebeat or `inngest/functions/discovery.ts` for Apify-based merchants), the ICP list ends up as either:
-
-- **`DEFAULT_YELP_TERMS` array** at the top of the discovery route (Sitebeat pattern — see `app/api/cron/discover/route.ts`)
-- **`PRICE_MIN_CENTS` + an Apify actor filter** (Realscale/Relist pattern — see `inngest/functions/discovery.ts`)
-- **Env-driven** (`YELP_DISCOVERY_TERMS` / `YELP_DISCOVERY_LOCATIONS`) — recommended for new merchants so you can pivot ICPs without redeploying
-
-The data is the ICP; the discovery code shouldn't hardcode it past the prototype phase.
-
----
-
-## Reference
-
-Sitebeat's full ICP-pivot postmortem lives in `lib/check-recommendations.ts` comments + the May 2026 commit history in [`Zilla-HQ/sitebeat`](https://github.com/Zilla-HQ/sitebeat).
+- **Kids directly** — COPPA + ethics. Block via Meta's `Audiences > Exclusions` (Under 18 must be excluded).
+- **"Crafts / DIY parents"** who would rather make the book themselves. Not the buyer.
+- **"Educational toys" cold leads** — too broad, wastes CPM on parents looking for screens-and-flashcards.
+- **People in markets we can't ship to** (Meta's auto-placement sometimes adds these — exclude via campaign-level country list).
