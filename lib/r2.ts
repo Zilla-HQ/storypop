@@ -54,3 +54,29 @@ export async function signedR2Url(key: string, expiresInSeconds = 60 * 60 * 24 *
 export function r2Bucket(): string {
   return bucket;
 }
+
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+
+/**
+ * Delete an R2 object. Used by `inngest/functions/photo-purge.ts` to honor
+ * the 30-day photo-retention commitment in the privacy policy.
+ *
+ * Idempotent — deleting a key that doesn't exist returns successfully.
+ */
+export async function deleteR2Object(keyOrUrl: string): Promise<void> {
+  if (!keyOrUrl) return;
+  // Accept either a full public URL or a bare R2 key. Strip the public
+  // domain prefix if present.
+  let key = keyOrUrl;
+  if (publicUrl && key.startsWith(publicUrl)) {
+    key = key.slice(publicUrl.length).replace(/^\//, "");
+  } else if (key.startsWith("http")) {
+    try {
+      key = new URL(key).pathname.replace(/^\//, "");
+    } catch {
+      // not a URL, leave as-is
+    }
+  }
+  const c = requireClient();
+  await c.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+}

@@ -1,19 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db, orders, listings } from "@/db";
+import { db, listings, orders } from "@/db";
 import { eq } from "drizzle-orm";
 import { stripe, publicAppUrl } from "@/lib/stripe";
-import { getSettings } from "@/db/settings";
+import { env } from "@/lib/env";
+import { getService } from "@/lib/services";
+import { trackEvent } from "@/lib/posthog";
+import { sendMetaEvent } from "@/lib/meta-capi";
 
 export const runtime = "nodejs";
 
+/**
+ * StoryPop checkout: takes a book (the parent-submitted form) + chosen
+ * SKU, creates a one-time Stripe Checkout session, persists a `pending`
+ * order. Stripe webhook flips it to `paid` and fires `orders/paid`, which
+ * the fulfillment Inngest function picks up to render the rest of the
+ * book and dispatch PDF email or Lulu print job.
+ *
+ * Stripe price IDs by SKU live in env (see lib/services.ts:stripePriceEnv).
+ * For print SKUs (softcover/hardcover/bundle), the buyer must include a
+ * shipping address in the body.
+ */
+
+const shippingSchema = z.object({
+  name: z.string().min(1).max(120),
+  street1: z.string().min(1).max(200),
+  street2: z.string().max(200).optional(),
+  city: z.string().min(1).max(120),
+  stateCode: z.string().min(2).max(3),
+  postcode: z.string().min(3).max(20),
+  countryCode: z.string().length(2),
+  phone: z.string().max(40).optional(),
+});
+
 const bodySchema = z.object({
-  listingId: z.string().uuid(),
-  listingSlug: z.string().optional(),
-  tier: z.enum(["standard", "premium", "rush"]),
-  stylePreset: z.string(),
-  /** Optional Stripe promotion_code id (e.g. "FOUNDING10"). Looked up at checkout. */
-  promoCode: z.string().optional(),
+  bookId: z.string().uuid(),
+  serviceId: z.enum(["pdf", "softcover", "hardcover", "gift-bundle"]),
+  rush: z.boolean().optional(),
+  customerEmail: z.string().email(),
+  shipping: shippingSchema.optional(),
+  eventId: z.string().max(100).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -21,96 +47,80 @@ export async function POST(req: NextRequest) {
   try {
     body = bodySchema.parse(await req.json());
   } catch (err) {
-    return NextResponse.json({ error: "Invalid body", detail: String(err) }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid input", details: String(err) },
+      { status: 400 },
+    );
   }
 
-  const [listing] = await db
-    .select()
-    .from(listings)
-    .where(eq(listings.id, body.listingId))
-    .limit(1);
-  if (!listing) {
-    return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+  const sku = getService(body.serviceId);
+  if (!sku) {
+    return NextResponse.json({ error: "Unknown SKU" }, { status: 400 });
+  }
+  if (sku.fulfillment !== "digital_pdf" && !body.shipping) {
+    return NextResponse.json(
+      { error: "Print SKUs require a shipping address" },
+      { status: 400 },
+    );
   }
 
-  const settings = await getSettings();
-  const amountCents =
-    body.tier === "standard"
-      ? settings.pricingStandardCents
-      : body.tier === "premium"
-        ? settings.pricingPremiumCents
-        : settings.pricingRushCents;
+  const [book] = await db.select().from(listings).where(eq(listings.id, body.bookId));
+  if (!book) {
+    return NextResponse.json({ error: "Book not found" }, { status: 404 });
+  }
 
-  // Affiliate attribution — first-touch cookie set by middleware when a
-  // visitor arrives with ?ref=CODE. Stamp on the order at checkout time
-  // so the admin/referrals view can compute payouts directly from orders.
-  const referralCode = req.cookies.get("rs_ref")?.value ?? null;
+  const priceId = env(sku.stripePriceEnv);
+  if (!priceId) {
+    return NextResponse.json(
+      { error: `Stripe price id missing — set ${sku.stripePriceEnv}` },
+      { status: 500 },
+    );
+  }
+
+  const amountCents = body.rush && sku.rushPriceCents ? sku.rushPriceCents : sku.basePriceCents;
 
   const [order] = await db
     .insert(orders)
     .values({
-      listingId: listing.id,
-      tier: body.tier,
-      stylePreset: body.stylePreset,
+      listingId: book.id,
+      serviceId: sku.id,
+      rush: body.rush ?? false,
       amountCents,
+      customerEmail: body.customerEmail,
+      shipping: body.shipping ?? null,
       status: "pending",
-      customerEmail: listing.agentEmail ?? null,
-      referralCode,
     })
-    .returning();
-
-  const appUrl = publicAppUrl();
-
-  // Look up promo code if provided. Stripe's promotion_codes API takes a "code"
-  // (the customer-facing string like "FOUNDING10"); we pass back the id.
-  let discountId: string | null = null;
-  if (body.promoCode) {
-    try {
-      const promos = await stripe.promotionCodes.list({
-        code: body.promoCode,
-        active: true,
-        limit: 1,
-      });
-      if (promos.data.length > 0) {
-        discountId = promos.data[0].id;
-      }
-    } catch {
-      // Silent fail — we'd rather charge full price than 500.
-    }
+    .returning({ id: orders.id });
+  if (!order) {
+    return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
   }
 
+  const baseUrl = publicAppUrl();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    payment_method_types: ["card"],
-    customer_email: listing.agentEmail ?? undefined,
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `Realscale — ${body.tier} enhancement`,
-            description: `Enhanced photos for ${listing.address}. Style: ${body.stylePreset}.`,
-          },
-          unit_amount: amountCents,
-        },
-        quantity: 1,
+    line_items: [{ price: priceId, quantity: 1 }],
+    customer_email: body.customerEmail,
+    success_url: `${baseUrl}/delivery/${order.id}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/preview/${book.id}?canceled=1`,
+    client_reference_id: order.id,
+    payment_intent_data: {
+      metadata: {
+        order_id: order.id,
+        book_id: book.id,
+        sku: sku.id,
       },
-    ],
-    ...(discountId
-      ? { discounts: [{ promotion_code: discountId }] }
-      : { allow_promotion_codes: true }),
-    metadata: {
-      orderId: order.id,
-      listingId: listing.id,
-      tier: body.tier,
-      stylePreset: body.stylePreset,
-      ...(body.promoCode ? { promoCode: body.promoCode } : {}),
-      ...(referralCode ? { referralCode } : {}),
     },
-    success_url: `${appUrl}/delivery/${order.id}?paid=1`,
-    cancel_url: body.listingSlug
-      ? `${appUrl}/l/${body.listingSlug}`
-      : `${appUrl}/checkout/${order.id}`,
+    metadata: {
+      order_id: order.id,
+      book_id: book.id,
+      sku: sku.id,
+    },
+    // Collect shipping at Stripe Checkout for print SKUs even though we
+    // already have it — Stripe also pulls tax + handles address validation.
+    shipping_address_collection:
+      sku.fulfillment === "digital_pdf"
+        ? undefined
+        : { allowed_countries: ["US", "CA", "GB", "AU", "DE", "FR", "NL"] },
   });
 
   await db
@@ -118,5 +128,22 @@ export async function POST(req: NextRequest) {
     .set({ stripeSessionId: session.id })
     .where(eq(orders.id, order.id));
 
-  return NextResponse.json({ orderId: order.id, url: session.url });
+  await Promise.allSettled([
+    trackEvent({
+      distinctId: book.id,
+      event: "checkout_initiated",
+      properties: { orderId: order.id, sku: sku.id },
+    }),
+    sendMetaEvent("InitiateCheckout", {
+      bookId: book.id,
+      eventId: body.eventId,
+      value: amountCents / 100,
+    }).catch(() => {}),
+  ]);
+
+  return NextResponse.json({
+    sessionId: session.id,
+    url: session.url,
+    orderId: order.id,
+  });
 }

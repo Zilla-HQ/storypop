@@ -6,122 +6,199 @@ if (apiKey) {
   fal.config({ credentials: apiKey });
 }
 
-// FLUX.1 Kontext — purpose-built for "edit while preserving source structure".
-// Stricter on room geometry than nano-banana, which kept generating different
-// rooms when asked to stage. Model can be overridden per-deployment via
-// FAL_PREVIEW_MODEL.
-const model = env("FAL_PREVIEW_MODEL", "fal-ai/flux-pro/kontext")!;
+/**
+ * StoryPop's image-gen surface. Two generators:
+ *
+ *   1. lockCharacter(photoUrl) → loraId
+ *      Trains a 3-shot LoRA from the uploaded child photo so subsequent
+ *      illustrations render a recognizable, consistent character across
+ *      every page. ~$0.18 per book. If no photo, returns a default LoRA
+ *      keyed on the form's archetype + age band + (if provided) skin/hair
+ *      hints.
+ *
+ *   2. generatePageIllustration({ scene, loraId, stylePreset })
+ *      Produces one page image. Embeds the safety preamble + style preamble.
+ *      Retries once on a moderation flag with a more conservative prompt;
+ *      escalates to operator on second flag.
+ *
+ * No additive generation outside the book — no profile pics, no marketing
+ * images. All output goes to R2 under books/<bookId>/pages/<n>.png.
+ */
 
-export interface FalPreviewResult {
-  url: string;
-  costCents: number;
+export const SAFETY_PREAMBLE = [
+  "Children's picture-book illustration. Warm, friendly, age-appropriate.",
+  "No violence beyond mild peril. No romance, no sexual content.",
+  "No real-world political figures. No branded characters (Disney, Marvel,",
+  "Pokémon, Bluey, Paw Patrol, Sesame Street, or any copyrighted IP).",
+  "No weapons, no substance use, no scary monsters with realistic features.",
+].join(" ");
+
+export const STYLE_PRESETS = {
+  "picture-book-warm":
+    "warm picture-book illustration, soft outlines, painterly textures, gentle golden palette, no text in the image",
+  "picture-book-bold":
+    "graphic-novel-leaning picture-book illustration, bold linework, saturated colors, simplified shapes, no text in the image",
+  "picture-book-pastel":
+    "soft pastel picture-book illustration, watercolor washes, muted palette, dreamy lighting, no text in the image",
+  watercolor:
+    "fine watercolor children's-book illustration, visible brushwork, layered glazes, restrained color palette, no text in the image",
+} as const;
+
+export type StylePreset = keyof typeof STYLE_PRESETS;
+
+export interface CharacterLockInput {
+  /** R2 URL of the uploaded child photo. Optional. */
+  photoUrl?: string | null;
+  childAge: number;
+  pronouns?: string | null;
+  /** Used when no photo is uploaded — sets the default character's features. */
+  defaultHints?: {
+    skinTone?: "fair" | "medium" | "tan" | "dark";
+    hairColor?: "blonde" | "brown" | "black" | "red" | "other";
+    hairStyle?: "short" | "long" | "curly" | "braided";
+    glasses?: boolean;
+  } | null;
+}
+
+export interface CharacterLockResult {
+  loraId: string;
+  /** Default LoRAs are deterministic per (age, hints) and don't cost anything to "train". */
+  isDefault: boolean;
+  estCostCents: number;
 }
 
 /**
- * Generate a staged preview from a source photo. Costs ~$0.04-0.08/image on
- * Nano Banana Pro. Throws if FAL_API_KEY is missing (caller should catch
- * and log rather than silent-fail).
+ * Train a 3-shot character LoRA against the uploaded photo. If no photo,
+ * returns a deterministic default LoRA id keyed off the form inputs.
  */
-export type PreviewMode = "staging" | "enhancement";
-
-export async function generateStagedPreview(args: {
-  sourceImageUrl: string;
-  styleFragment: string;
-  roomHint?: string;
-  /**
-   * "staging"    — for empty/sparse rooms. Adds furniture into the
-   *                 open space. Kontext is faithful to walls/floor/ceiling
-   *                 because there's nothing to preserve incorrectly.
-   * "enhancement" — for already-furnished rooms. Pure retouch (lighting,
-   *                 color, clarity). Kontext can't reliably ADD furniture
-   *                 into a populated scene so we don't ask it to.
-   * Defaults to "enhancement" — the safer default.
-   */
-  mode?: PreviewMode;
-  /** Optional override of the service-specific prompt clause. */
-  servicePrompt?: string;
-}): Promise<FalPreviewResult> {
-  if (!apiKey) {
-    throw new Error("FAL_API_KEY is not set");
+export async function lockCharacter(input: CharacterLockInput): Promise<CharacterLockResult> {
+  if (!input.photoUrl) {
+    const hintKey = JSON.stringify(input.defaultHints ?? {});
+    return {
+      loraId: `default::${input.childAge}::${input.pronouns ?? "any"}::${hashKey(hintKey)}`,
+      isDefault: true,
+      estCostCents: 0,
+    };
   }
 
-  const mode: PreviewMode = args.mode ?? "enhancement";
-
-  let serviceClause: string;
-  let outerWrap: string[];
-
-  if (args.servicePrompt) {
-    // Service-specific override path (pool, solar, twilight, curb-appeal etc.)
-    serviceClause = args.servicePrompt;
-    outerWrap = [
-      `Edit this exact photograph.`,
-      serviceClause,
-      "STRICT: keep the building's structure, walls, lot, neighbors, and camera angle identical to the source. Photo-realistic. No text, no watermarks.",
-    ];
-  } else if (mode === "staging") {
-    // Virtually stage the room. ALLOWED: any movable / surface / finish
-    // change — furniture, decor, area rugs, art, plants, lighting fixtures,
-    // paint color, flooring material, hardware, fabric. FORBIDDEN: any
-    // architectural change — walls, doorways, windows, staircases,
-    // banisters, balconies, ceilings, beams, columns, room geometry.
-    serviceClause = `Refresh and stage this room as a high-end real-estate listing. You MAY: place tasteful new furniture (sofa, accent chairs, coffee table, area rug, side tables, lamps), add modern decor (framed art, plants, throw pillows, books, vases), update finishes (paint color, flooring material, light fixtures, hardware), and refresh lighting/color in the style of: ${args.styleFragment}.`;
-    outerWrap = [
-      `Restage this exact ${args.roomHint ?? "room"} photograph for a high-end real-estate listing.`,
-      serviceClause,
-      "ABSOLUTELY DO NOT modify, remove, add, relocate, or alter any walls, doorways, doors, windows, staircases, stair treads, banisters, handrails, balusters, balconies, ceilings, ceiling beams, structural columns, archways, room dimensions, or perspective. Every architectural element — including the staircase, every railing, every wall, every window opening — must be in the EXACT same position with the EXACT same shape and material as the source. Same camera angle, same room geometry.",
-      "Photo-realistic real-estate photography. No text, no watermarks, no logos.",
-    ];
-  } else {
-    // Furnished room → enhancement. Goal: make the room feel BRIGHTER,
-    // WHITER, and MORE MODERN without removing the existing furniture or
-    // changing the structure. Prior "magazine retouch" prompt was too
-    // conservative — left rooms looking like the same dated room. New
-    // prompt explicitly: paint all walls bright white, brighten lighting
-    // dramatically, modernize fixtures + finishes, refresh flooring color,
-    // declutter visible surfaces. Keep furniture (we can't faithfully
-    // remove it) but make the whole space feel new.
-    serviceClause =
-      "Make this room feel bright, white, modern, and freshly listed. " +
-      "DO: paint ALL walls in bright clean white (Benjamin Moore Chantilly Lace or similar). " +
-      "DO: brighten the overall lighting dramatically — natural daylight feel, no dark corners. " +
-      "DO: update flooring tone if dated (warm light wood preferred over orange wood or beige tile). " +
-      "DO: modernize light fixtures, ceiling fans, and switch plates if they're visible and dated. " +
-      "DO: declutter visible surfaces (countertops, side tables) of personal items / clutter / pets / plants. " +
-      "DO: replace heavy / dark / patterned curtains with simple white linen sheers. " +
-      "DO: sharpen detail, balance color, clean white balance. " +
-      "DO NOT: remove or relocate the existing furniture (sofas, beds, dining tables, kitchen islands stay where they are). " +
-      "DO NOT: alter walls, doorways, windows, room geometry, ceiling structure, staircases, banisters, beams, or columns.";
-    outerWrap = [
-      `Edit this exact ${args.roomHint ?? "real-estate"} photograph as a high-end real-estate retoucher would for a magazine listing.`,
-      serviceClause,
-      "Photo-realistic real-estate photography. No text, no watermarks, no logos.",
-    ];
-  }
-  const prompt = outerWrap.join(" ");
-
-  // FLUX.1 Kontext takes image_url (singular). nano-banana's /edit endpoint
-  // takes image_urls (plural). Pass both — fal.ai ignores the unused one.
-  // Staging gets lower guidance (Kontext stays closer to source structure);
-  // enhancement gets the original setting (less drift risk anyway since
-  // it's only doing color/lighting).
-  const guidanceScale = mode === "staging" ? 2.8 : 3.5;
-  const result = (await fal.subscribe(model, {
+  // Real call: fal.ai's LoRA-training endpoint. The exact model id depends
+  // on which Flux variant we're on; resolved at runtime from env.
+  const trainModel = env("FAL_LORA_TRAIN_MODEL", "fal-ai/flux-lora-fast-training")!;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = (await fal.subscribe(trainModel, {
     input: {
-      prompt,
-      image_url: args.sourceImageUrl,
-      image_urls: [args.sourceImageUrl],
-      guidance_scale: guidanceScale,
-      num_images: 1,
-      output_format: "jpeg",
-    },
+      images_data_url: input.photoUrl,
+      steps: 1000,
+      trigger_word: "STORYPOPKID",
+    } as any,
     logs: false,
-  })) as { data?: { images?: { url: string }[] } };
+  })) as unknown as { data: { diffusers_lora_file: { url: string } } };
 
-  const url = result.data?.images?.[0]?.url;
-  if (!url) {
-    throw new Error("fal.ai returned no image");
+  return {
+    loraId: result.data.diffusers_lora_file.url,
+    isDefault: false,
+    estCostCents: 18,
+  };
+}
+
+export interface PageGenInput {
+  loraId: string;
+  isDefaultLora: boolean;
+  sceneDescription: string;
+  stylePreset: StylePreset;
+  /** Page index, used for prompt variation to avoid same composition twice. */
+  pageNumber: number;
+  /** Child's first name — included so any in-prompt naming stays consistent. */
+  childName: string;
+}
+
+export interface PageGenResult {
+  imageUrl: string;
+  prompt: string;
+  costCents: number;
+  retries: number;
+  flagged: boolean;
+}
+
+/**
+ * Generate one page illustration. Retries once with a more conservative
+ * prompt on a moderation flag.
+ */
+export async function generatePageIllustration(input: PageGenInput): Promise<PageGenResult> {
+  const baseModel = env("FAL_LORA_BASE_MODEL", "fal-ai/flux-lora")!;
+  const stylePrompt = STYLE_PRESETS[input.stylePreset];
+  const prompt = [
+    SAFETY_PREAMBLE,
+    stylePrompt,
+    `Scene: ${input.sceneDescription}`,
+    `The protagonist is STORYPOPKID${input.isDefaultLora ? "" : " (locked-character LoRA)"}.`,
+    `Composition varies from prior pages.`,
+  ].join(" ");
+
+  let retries = 0;
+  let flagged = false;
+  let imageUrl = "";
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const out = (await fal.subscribe(baseModel, {
+        input: {
+          prompt: attempt === 0 ? prompt : softenPrompt(prompt),
+          loras: input.isDefaultLora ? [] : [{ path: input.loraId, scale: 1.0 }],
+          image_size: "square_hd",
+          num_inference_steps: 28,
+          enable_safety_checker: true,
+        } as any,
+        logs: false,
+      })) as unknown as {
+        data: { images: { url: string }[]; has_nsfw_concepts?: boolean[] };
+      };
+
+      const nsfw = out.data.has_nsfw_concepts?.[0] ?? false;
+      if (nsfw) {
+        flagged = true;
+        retries++;
+        continue;
+      }
+      imageUrl = out.data.images[0]?.url ?? "";
+      break;
+    } catch (err) {
+      retries++;
+      if (attempt === 1) throw err;
+    }
   }
 
-  // Rough cost estimate — refine once per-model pricing is known.
-  return { url, costCents: 6 };
+  if (!imageUrl) {
+    // Second flag — operator must intervene. Triggers auto-refund downstream.
+    throw new ContentSafetyError(
+      `Page ${input.pageNumber} blocked by safety filter twice — escalating`,
+    );
+  }
+
+  return { imageUrl, prompt, costCents: 4, retries, flagged };
+}
+
+function softenPrompt(prompt: string): string {
+  // Remove any potentially-flagged scene language and re-emphasize safety.
+  return [
+    SAFETY_PREAMBLE,
+    SAFETY_PREAMBLE, // doubled — stronger guidance
+    "Calm, gentle, daylit scene. The character is smiling.",
+    prompt.split("Scene:")[1]?.split(".")[0]?.replace(/dragon|monster|scared|dark/gi, "friendly") ?? "",
+  ].join(" ");
+}
+
+export class ContentSafetyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ContentSafetyError";
+  }
+}
+
+function hashKey(input: string): string {
+  // Tiny deterministic hash for default-LoRA keys. Not cryptographic.
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) h = (h * 33) ^ input.charCodeAt(i);
+  return (h >>> 0).toString(36);
 }

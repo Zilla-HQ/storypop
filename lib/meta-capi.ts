@@ -2,6 +2,33 @@ import crypto from "node:crypto";
 import { env } from "@/lib/env";
 
 /**
+ * Convenience wrapper for the most common firing pattern (no PII). Used
+ * by `/api/self-serve` and the Stripe webhook to dispatch a single CAPI
+ * event with just a name + optional dedup id. For PII-attached events
+ * (Purchase with hashed buyer email/phone), call `sendCapiEvent` directly.
+ */
+export async function sendMetaEvent(
+  eventName:
+    | "ViewContent"
+    | "Contact"
+    | "InitiateCheckout"
+    | "Purchase"
+    | "Lead",
+  args?: { eventId?: string; bookId?: string; listingId?: string; value?: number },
+): Promise<void> {
+  try {
+    await sendCapiEvent({
+      eventName,
+      eventId: args?.eventId,
+      externalId: args?.bookId ?? args?.listingId,
+      value: args?.value,
+    });
+  } catch {
+    // CAPI failures are non-fatal.
+  }
+}
+
+/**
  * Meta Conversions API dispatcher. Server-side counterpart to the client Pixel.
  *
  * Why this matters: iOS 14+ blocks ~30% of client Pixel events. CAPI from our
