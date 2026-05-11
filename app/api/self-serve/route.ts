@@ -1,19 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, listings } from "@/db";
-import { eq } from "drizzle-orm";
 import { inngest } from "@/inngest/client";
-import { parseListingUrl } from "@/lib/listing-url";
-import { slugify } from "@/lib/utils";
 import { trackEvent } from "@/lib/posthog";
-import { getService, DEFAULT_SERVICE_ID } from "@/lib/services";
-import { sendMetaEvent } from "@/lib/meta";
+import { sendMetaEvent } from "@/lib/meta-capi";
+import { scoreBookRequest, isQualified } from "@/lib/scoring";
 
 export const runtime = "nodejs";
 
+/**
+ * StoryPop self-serve: a parent submits the `/create` form. We validate,
+ * persist a book row, fire `book-request/created` to start preview
+ * generation, and return the book id so the client can poll.
+ *
+ * `listings` is the merchant-template table name; for StoryPop the row
+ * stores a book request (childName, age, archetype, photo, etc.).
+ */
+
 const bodySchema = z.object({
-  url: z.string().url().min(10).max(500),
-  serviceId: z.string().max(50).optional(),
+  childName: z.string().min(1).max(40),
+  childAge: z.number().int().min(1).max(12),
+  pronouns: z.enum(["he/him", "she/her", "they/them"]).optional(),
+  archetype: z.enum([
+    "bedtime",
+    "adventure",
+    "first-day",
+    "sibling",
+    "lost-tooth",
+    "birthday",
+  ]),
+  photoUrl: z.string().url().optional(),
+  stylePreset: z
+    .enum(["picture-book-warm", "picture-book-bold", "picture-book-pastel", "watercolor"])
+    .optional(),
+  defaultHints: z
+    .object({
+      skinTone: z.enum(["fair", "medium", "tan", "dark"]).optional(),
+      hairColor: z.enum(["blonde", "brown", "black", "red", "other"]).optional(),
+      hairStyle: z.enum(["short", "long", "curly", "braided"]).optional(),
+      glasses: z.boolean().optional(),
+    })
+    .optional(),
+  buyerEmail: z.string().email(),
   eventId: z.string().max(100).optional(),
 });
 
@@ -21,93 +49,56 @@ export async function POST(req: NextRequest) {
   let body: z.infer<typeof bodySchema>;
   try {
     body = bodySchema.parse(await req.json());
-  } catch {
-    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  } catch (err) {
+    return NextResponse.json({ error: "Invalid input", details: String(err) }, { status: 400 });
   }
 
-  const parsed = parseListingUrl(body.url);
-  if (!parsed) {
-    return NextResponse.json(
-      { error: "Paste a Zillow, Redfin, or Realtor.com listing URL." },
-      { status: 400 },
-    );
+  const score = scoreBookRequest({
+    childName: body.childName,
+    childAge: body.childAge,
+    pronouns: body.pronouns ?? null,
+    archetype: body.archetype,
+    photoUrl: body.photoUrl ?? null,
+  });
+  const qualified = isQualified({
+    completeness: score.completeness,
+    photoClarityScore: null, // computed async by lib/vision.ts if a photo is uploaded
+  });
+  if (!qualified.qualified) {
+    return NextResponse.json({ error: qualified.reason }, { status: 400 });
   }
 
-  // Fire Meta Lead event (server-side CAPI). The browser fires the matching
-  // pixel event with the same event_id so Meta dedupes. This is the
-  // optimization signal for the OUTCOME_LEADS campaign — without it Meta has
-  // nothing to optimize on. Fired before the dedup short-circuit so deduped
-  // submissions count too (still real intent).
-  const fireLead = () =>
-    void sendMetaEvent({
-      eventName: "Lead",
-      eventId: body.eventId,
-      fbp: req.cookies.get("_fbp")?.value,
-      fbc: req.cookies.get("_fbc")?.value,
-      clientIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
-      userAgent: req.headers.get("user-agent") ?? undefined,
-      sourceUrl: req.headers.get("referer") ?? undefined,
-      customData: {
-        content_name: "self_serve_submitted",
-        source: parsed.source,
-      },
-    });
-
-  // De-dupe: if we've already scraped this listing, return the existing slug.
-  const [existing] = await db
-    .select()
-    .from(listings)
-    .where(eq(listings.sourceId, parsed.sourceId))
-    .limit(1);
-  if (existing) {
-    fireLead();
-    return NextResponse.json({ listingId: existing.id, slug: existing.slug, existed: true });
-  }
-
-  // Insert a stub — actual data fills in from the Apify scrape.
-  const stubAddress = "Loading…";
-  const stubSlug = `${slugify(`listing ${parsed.source} ${parsed.sourceId}`)}-${Date.now().toString(36)}`;
-  const [row] = await db
+  const inserted = await db
     .insert(listings)
     .values({
-      source: parsed.source,
-      sourceId: parsed.sourceId,
-      address: stubAddress,
-      city: "",
-      state: "",
-      zip: "",
-      price: 0,
-      photos: [],
-      slug: stubSlug,
-      qualified: true, // self-serve: skip the cold-outreach targeting gate
-      qualificationReason: "self-serve opt-in",
+      childName: body.childName,
+      childAge: body.childAge,
+      pronouns: body.pronouns ?? null,
+      archetype: body.archetype,
+      photoUrl: body.photoUrl ?? null,
+      stylePreset: body.stylePreset ?? "picture-book-warm",
+      defaultCharacterHints: body.defaultHints ?? null,
+      primaryContactEmail: body.buyerEmail,
+      photoExpiresAt: body.photoUrl
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        : null,
+      createdAt: new Date(),
     })
-    .returning();
-
-  // Resolve the requested service. If unknown, fall back to the default.
-  const requested = body.serviceId ? getService(body.serviceId) : undefined;
-  const service = requested ?? getService(DEFAULT_SERVICE_ID)!;
+    .returning({ id: listings.id });
+  const bookId = inserted[0]?.id;
+  if (!bookId) {
+    return NextResponse.json({ error: "Failed to create book" }, { status: 500 });
+  }
 
   await inngest.send({
-    name: "self-serve/submitted",
-    data: {
-      listingId: row.id,
-      url: parsed.canonicalUrl,
-      source: parsed.source,
-      serviceId: service.id,
-    },
+    name: "book-request/created",
+    data: { bookId },
   });
 
-  await trackEvent({
-    distinctId: row.id,
-    event: "self_serve_submitted",
-    properties: {
-      source: parsed.source,
-      source_id: parsed.sourceId,
-      service_id: service.id,
-    },
-  });
+  await Promise.allSettled([
+    trackEvent("book_request_submitted", { bookId, archetype: body.archetype }),
+    sendMetaEvent("InitiateCheckout", { bookId, eventId: body.eventId }),
+  ]);
 
-  fireLead();
-  return NextResponse.json({ listingId: row.id, slug: row.slug, existed: false });
+  return NextResponse.json({ bookId });
 }

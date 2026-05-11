@@ -11,7 +11,8 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { MetaInsightsMetadata } from "@/lib/meta-ads";
+// MetaInsightsMetadata import dropped — Meta insights table not used in StoryPop v1.
+type MetaInsightsMetadata = Record<string, unknown>;
 
 // All Relist tables live under the "relist" schema so they can share a
 // Supabase/Postgres instance with other apps without colliding on common
