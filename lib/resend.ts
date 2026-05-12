@@ -5,13 +5,23 @@ import { env } from "@/lib/env";
 const apiKey = env("RESEND_API_KEY");
 const resend = apiKey ? new Resend(apiKey) : null;
 
-const BUSINESS_NAME = env("BUSINESS_NAME", "Realscale")!;
+const BUSINESS_NAME = env("BUSINESS_NAME", "StoryPop")!;
 const BUSINESS_ADDRESS = env("BUSINESS_ADDRESS", "[SET BUSINESS_ADDRESS IN .env]")!;
 const APP_URL = env("NEXT_PUBLIC_APP_URL", "http://localhost:3000")!;
 
+// Hard guard against shipping CAN-SPAM footers with a template-default
+// brand name. If anyone copies .env.example without changing this, the
+// app fails fast at first email send rather than blasting "Realscale"
+// from a StoryPop domain.
+if (BUSINESS_NAME === "Realscale" || BUSINESS_NAME === "Relist") {
+  throw new Error(
+    `BUSINESS_NAME is set to the template default ("${BUSINESS_NAME}"). Set BUSINESS_NAME=StoryPop in your environment.`,
+  );
+}
+
 export interface SendEmailArgs {
   to: string;
-  fromDomain: string; // e.g. "mail.realscale.app"
+  fromDomain: string; // e.g. "mail.storypop.shop"
   fromName?: string;
   subject: string;
   mjml: string; // MJML source body (no footer — we inject it)
@@ -95,7 +105,7 @@ export async function sendComplianceEmail(args: SendEmailArgs): Promise<SendEmai
   // operator's actual email/parent-company domain. REPLIES_EMAIL is forwarded
   // to the operator via an external forwarder (e.g. ImprovMX).
   const defaultReplyTo = env("REPLIES_EMAIL", isSharedSender
-    ? `replies@realscale.app`
+    ? `replies@storypop.shop`
     : `replies@${args.fromDomain}`)!;
 
   // mailto unsubscribe only works on an owned domain; on the shared sender

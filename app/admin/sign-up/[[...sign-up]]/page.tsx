@@ -1,6 +1,6 @@
 import { SignUp } from "@clerk/nextjs";
 
-export const metadata = { title: "Sign up — Realscale admin" };
+export const metadata = { title: "Sign up — StoryPop admin" };
 
 export default function SignUpPage() {
   return (

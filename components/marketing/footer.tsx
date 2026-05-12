@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export function Footer() {
-  const businessName = process.env.BUSINESS_NAME ?? "Realscale";
+  const businessName = process.env.BUSINESS_NAME ?? "StoryPop";
   const address = process.env.BUSINESS_ADDRESS ?? "";
   return (
     <footer className="border-t bg-muted/30 py-10">

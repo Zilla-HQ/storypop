@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 const accountId = env("R2_ACCOUNT_ID");
 const accessKeyId = env("R2_ACCESS_KEY_ID");
 const secretAccessKey = env("R2_SECRET_ACCESS_KEY");
-const bucket = env("R2_BUCKET", "relist-photos")!;
+const bucket = env("R2_BUCKET", "storypop-books")!;
 const publicUrl = env("R2_PUBLIC_URL");
 
 const client =

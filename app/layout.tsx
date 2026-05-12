@@ -3,9 +3,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Realscale — AI photo enhancement for real estate",
+  title: "StoryPop — a book where your kid is the hero",
   description:
-    "Enhanced listing photos in under 2 hours. AI-powered staging, sky replacement, and exterior cleanup for $79.",
+    "Personalized illustrated children's books. Tell us a name, age, and story idea — Pip writes and illustrates the whole book. Instant PDF, softcover, or hardcover.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

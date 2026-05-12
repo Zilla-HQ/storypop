@@ -15,13 +15,13 @@ import { detectProviderError, shouldPausePipeline, type ProviderErrorInfo } from
 const apiKey = env("RESEND_API_KEY");
 const resend = apiKey ? new Resend(apiKey) : null;
 
-const SENDER_DOMAINS = (env("SENDER_DOMAINS", "mail.restay.agency") ?? "mail.restay.agency")
+const SENDER_DOMAINS = (env("SENDER_DOMAINS", "mail.storypop.shop") ?? "mail.storypop.shop")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-const FROM_DOMAIN = SENDER_DOMAINS[0] ?? "mail.restay.agency";
+const FROM_DOMAIN = SENDER_DOMAINS[0] ?? "mail.storypop.shop";
 const OPERATOR_EMAIL = env("OPERATOR_EMAIL", env("REPLIES_EMAIL", "jack@seifdn.org"))!;
-const APP_URL = env("NEXT_PUBLIC_APP_URL", "https://restay.agency")!;
+const APP_URL = env("NEXT_PUBLIC_APP_URL", "https://storypop.shop")!;
 
 export interface OpsAlertArgs {
   /** Short imperative subject — appears in the operator's inbox preview. */
@@ -56,7 +56,7 @@ export async function sendOpsAlert(args: OpsAlertArgs): Promise<void> {
   const icon = args.severity === "critical" ? "🚨" : args.severity === "warning" ? "⚠" : "ℹ";
   try {
     await resend.emails.send({
-      from: `Restay Ops <ops@${FROM_DOMAIN}>`,
+      from: `StoryPop Ops <ops@${FROM_DOMAIN}>`,
       to: OPERATOR_EMAIL,
       subject: `${icon} ${args.subject}`,
       text: `${args.body}
