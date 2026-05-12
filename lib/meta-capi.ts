@@ -44,8 +44,9 @@ export async function sendMetaEvent(
  * request. Caller should `.catch()` the returned promise.
  */
 
+import { metaAccessToken } from "@/lib/meta-token";
+
 const PIXEL_ID = env("NEXT_PUBLIC_META_PIXEL_ID");
-const ACCESS_TOKEN = env("META_CONVERSIONS_API_TOKEN");
 const TEST_EVENT_CODE = env("META_TEST_EVENT_CODE"); // optional — for /test_events in Events Manager
 const API_VERSION = env("META_API_VERSION", "v19.0")!;
 
@@ -77,8 +78,9 @@ export interface CapiEventArgs {
 }
 
 export async function sendCapiEvent(args: CapiEventArgs): Promise<{ ok: boolean; error?: string }> {
+  const ACCESS_TOKEN = metaAccessToken();
   if (!PIXEL_ID || !ACCESS_TOKEN) {
-    console.warn("[capi] not configured (need NEXT_PUBLIC_META_PIXEL_ID + META_CONVERSIONS_API_TOKEN)");
+    console.warn("[capi] not configured (need NEXT_PUBLIC_META_PIXEL_ID + META_ACCESS_TOKEN)");
     return { ok: false, error: "not configured" };
   }
 

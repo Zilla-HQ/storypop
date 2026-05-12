@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { env } from "@/lib/env";
 
-const BASE = env("NEXT_PUBLIC_APP_URL", "https://realscale.app")!;
+const BASE = env("NEXT_PUBLIC_APP_URL", "https://storypop.shop")!;
 
 export default function robots(): MetadataRoute.Robots {
   return {
