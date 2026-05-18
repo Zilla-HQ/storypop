@@ -140,8 +140,8 @@ export const fulfillment = inngest.createFunction(
       const url = await signedR2Url(pdfR2Key, 7 * 24 * 60 * 60);
       await sendComplianceEmail({
         to: order.customerEmail ?? "",
-        fromDomain: "mail.storypop.shop",
-        subject: `${book.childName}'s book is ready`,
+        fromDomain: process.env.RESEND_SENDER_DOMAIN ?? "storypop.shop",
+        subject: `${book.childName}'s book is ready ✨`,
         mjml: pdfDeliveryMjml({ childName: book.childName as string, pdfUrl: url }),
         text: pdfDeliveryText({ childName: book.childName as string, pdfUrl: url }),
         listingId: book.id,
