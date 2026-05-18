@@ -101,7 +101,12 @@ export async function POST(req: NextRequest) {
       event: "book_request_submitted",
       properties: { bookId, archetype: body.archetype },
     }),
-    sendMetaEvent("InitiateCheckout", { bookId, eventId: body.eventId }).catch(() => {}),
+    // Form submission = Lead (intent signal). InitiateCheckout fires later
+    // from /api/checkout when the buyer clicks a price tier and we create
+    // a Stripe Checkout session. Reporting the wrong event here dilutes
+    // Meta's optimization — it'd learn to find people who submit forms
+    // rather than people who buy.
+    sendMetaEvent("Lead", { bookId, eventId: body.eventId }).catch(() => {}),
   ]);
 
   return NextResponse.json({ bookId });

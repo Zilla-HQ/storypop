@@ -31,7 +31,13 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
-      const orderId = session.metadata?.orderId;
+      // Stripe metadata keys: /api/checkout sets `order_id` (snake_case).
+      // Reading `orderId` (camelCase) — as this file did before — silently
+      // dropped EVERY webhook. Accept both during the migration so any
+      // historical sessions still resolve.
+      const orderId = (session.metadata?.order_id
+        ?? session.metadata?.orderId
+        ?? session.client_reference_id) as string | undefined;
       if (!orderId) break;
 
       const [updated] = await db
