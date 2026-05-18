@@ -10,9 +10,14 @@ interface Props {
   childName: string;
   childAge: number;
   archetype: string;
+  pronouns: string | null;
+  description: string | null;
+  favorites: string | null;
+  hasPhoto: boolean;
   ready: boolean;
   title: string | null;
-  pages: { pageNumber: number; url: string }[];
+  dedication: string | null;
+  pages: { pageNumber: number; url: string; body: string }[];
   lockedPageCount: number;
   customerEmail: string;
 }
@@ -102,6 +107,27 @@ export default function PreviewClient(props: Props) {
     );
   }
 
+  // Build the "what we used" pill row. Each chip is a visible signal that
+  // the story was generated from THIS family's inputs, not a stock template.
+  const inputChips: { label: string; tone: "name" | "fact" | "interest" | "photo" }[] = [];
+  inputChips.push({ label: props.childName, tone: "name" });
+  inputChips.push({ label: `age ${props.childAge}`, tone: "fact" });
+  if (props.pronouns) inputChips.push({ label: props.pronouns, tone: "fact" });
+  inputChips.push({ label: props.archetype, tone: "fact" });
+  if (props.favorites) {
+    // Split on common separators; keep each token as its own chip up to 4.
+    props.favorites
+      .split(/[,;]| and /i)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+      .forEach((f) => inputChips.push({ label: f, tone: "interest" }));
+  } else if (props.description) {
+    // Fall back to a compressed description chip so the row never looks bare.
+    inputChips.push({ label: truncate(props.description, 40), tone: "interest" });
+  }
+  if (props.hasPhoto) inputChips.push({ label: "your photo ✓", tone: "photo" });
+
   return (
     <main className="container mx-auto max-w-4xl px-6 py-16">
       <header className="text-center">
@@ -114,6 +140,29 @@ export default function PreviewClient(props: Props) {
         <p className="mt-3 text-muted-foreground">
           For {props.childName}, age {props.childAge} · {props.archetype}
         </p>
+        {props.dedication && (
+          <p className="mx-auto mt-4 max-w-xl text-base italic text-slate-700">
+            &ldquo;{props.dedication}&rdquo;
+          </p>
+        )}
+
+        {/* Personalization receipt — proves the story was built from THIS
+            family's inputs. Shown as colored chips so it scans in <1s. */}
+        <div className="mx-auto mt-6 max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Personalized from your inputs
+          </p>
+          <div className="mt-2 flex flex-wrap justify-center gap-2">
+            {inputChips.map((c, i) => (
+              <span
+                key={i}
+                className={`rounded-full px-3 py-1 text-xs font-medium ${chipClass(c.tone)}`}
+              >
+                {c.label}
+              </span>
+            ))}
+          </div>
+        </div>
       </header>
 
       <section className="mt-12 grid gap-6 sm:grid-cols-3">
@@ -127,8 +176,15 @@ export default function PreviewClient(props: Props) {
               alt={`Page ${p.pageNumber + 1}`}
               className="aspect-square w-full object-cover"
             />
-            <figcaption className="px-3 py-2 text-xs text-muted-foreground">
-              Page {p.pageNumber + 1} of {props.pages.length + props.lockedPageCount}
+            <figcaption className="space-y-2 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FF6B9D]">
+                Page {p.pageNumber + 1} of {props.pages.length + props.lockedPageCount}
+              </p>
+              {p.body && (
+                <p className="text-sm leading-snug text-slate-700">
+                  {highlightName(p.body, props.childName)}
+                </p>
+              )}
             </figcaption>
           </figure>
         ))}
@@ -140,7 +196,7 @@ export default function PreviewClient(props: Props) {
             +{props.lockedPageCount} more pages waiting
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Pick a format below to see the rest.
+            Pick a format below to see the rest of {props.childName}&apos;s story.
           </p>
         </section>
       )}
@@ -191,4 +247,41 @@ export default function PreviewClient(props: Props) {
       </footer>
     </main>
   );
+}
+
+function chipClass(tone: "name" | "fact" | "interest" | "photo"): string {
+  switch (tone) {
+    case "name":
+      return "bg-[#FF6B9D] text-white";
+    case "interest":
+      return "bg-[#FFD166]/40 text-slate-900";
+    case "photo":
+      return "bg-emerald-100 text-emerald-900";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
+// Bold every occurrence of the child's name in the page body so the
+// personalization is impossible to miss at a glance.
+function highlightName(body: string, name: string): React.ReactNode {
+  if (!name) return body;
+  const parts = body.split(new RegExp(`(${escapeRegex(name)})`, "gi"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === name.toLowerCase() ? (
+      <strong key={i} className="font-semibold text-slate-900">
+        {part}
+      </strong>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

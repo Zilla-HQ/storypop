@@ -29,7 +29,9 @@ export default async function PreviewPage({ params }: PageProps) {
   // If the preview hasn't finished generating yet, show the polling state.
   const ready = Boolean(preview);
 
-  // Sign R2 URLs for the visible pages (1-3) so the client can render them.
+  // Sign R2 URLs for the visible pages (1-3) AND pair each with its body
+  // text from the story payload so the preview can prove the personalization
+  // (kid's name appears in the prose, not just the picture).
   const signedPages = ready
     ? await Promise.all(
         preview.payload.previewPages
@@ -37,6 +39,7 @@ export default async function PreviewPage({ params }: PageProps) {
           .map(async (p) => ({
             pageNumber: p.pageNumber,
             url: await signedR2Url(p.r2Key, 60 * 60),
+            body: preview.payload.story.pages[p.pageNumber]?.body ?? "",
           })),
       )
     : [];
@@ -47,8 +50,13 @@ export default async function PreviewPage({ params }: PageProps) {
       childName={book.childName}
       childAge={book.childAge}
       archetype={book.archetype}
+      pronouns={book.pronouns}
+      description={book.description}
+      favorites={book.favorites}
+      hasPhoto={Boolean(book.photoUrl)}
       ready={ready}
       title={preview?.payload.story.title ?? null}
+      dedication={preview?.payload.story.dedication ?? null}
       pages={signedPages}
       lockedPageCount={
         ready ? Math.max(0, preview.payload.story.pages.length - signedPages.length) : 13
