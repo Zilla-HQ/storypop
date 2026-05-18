@@ -13,6 +13,7 @@ import {
 } from "@/lib/falai";
 import { createPrintJob, type LuluLineItem } from "@/lib/lulu";
 import { requireService } from "@/lib/services";
+import { assembleBookPdf } from "@/lib/pdf-builder";
 
 /**
  * StoryPop fulfillment: on `orders/paid`, render the remaining pages
@@ -104,15 +105,29 @@ export const fulfillment = inngest.createFunction(
     }
 
     // ─── 2. Assemble the PDF ─────────────────────────────────────────────
-    // The PDF builder is a small helper; deferred to a separate step so
-    // the cost is observable and retriable.
-    const pdfR2Key = `books/${book.id}/final.pdf`;
-    await step.run("assemble-pdf", async () => {
-      // Implementation: render react-pdf with the story.pages text + page
-      // image URLs. Stamp dedication page footer. Upload to R2.
-      // (Stub here — see lib/pdf-builder.ts in v2.)
-      logger.info({ bookId: book.id }, "TODO: assemble PDF via react-pdf");
-      return { uploaded: pdfR2Key };
+    // pdf-lib hand-rolled builder — see lib/pdf-builder.ts. Lighter than
+    // react-pdf and gives us fine control over the print-size + emoji
+    // sanitization (Claude's titles routinely contain ✨ which would
+    // crash pdf-lib's WinAnsi-only StandardFonts otherwise).
+    const pageR2Keys = Array.from({ length: story.pages.length }, (_, i) => {
+      const previewMatch = ((book.previewPages as { pageNumber: number; r2Key: string }[] | null) ?? [])
+        .find((p) => p.pageNumber === i);
+      return previewMatch?.r2Key ?? `books/${book.id}/pages/${i}.png`;
+    });
+    const pdfR2Key = await step.run("assemble-pdf", async () => {
+      const result = await assembleBookPdf({
+        bookId: book.id as string,
+        childName: book.childName as string,
+        storyTitle: ((book.story as { title?: string } | null) ?? {}).title,
+        dedication: ((book.story as { dedication?: string } | null) ?? {}).dedication,
+        pages: story.pages.map((p) => ({ body: p.body })),
+        pageR2Keys,
+      });
+      logger.info(
+        { bookId: book.id, r2Key: result.r2Key, bytes: result.byteLength },
+        "pdf assembled",
+      );
+      return result.r2Key;
     });
 
     await db
@@ -125,8 +140,8 @@ export const fulfillment = inngest.createFunction(
       const url = await signedR2Url(pdfR2Key, 7 * 24 * 60 * 60);
       await sendComplianceEmail({
         to: order.customerEmail ?? "",
-        fromDomain: "mail.storypop.shop",
-        subject: `${book.childName}'s book is ready`,
+        fromDomain: process.env.RESEND_SENDER_DOMAIN ?? "storypop.shop",
+        subject: `${book.childName}'s book is ready ✨`,
         mjml: pdfDeliveryMjml({ childName: book.childName as string, pdfUrl: url }),
         text: pdfDeliveryText({ childName: book.childName as string, pdfUrl: url }),
         listingId: book.id,

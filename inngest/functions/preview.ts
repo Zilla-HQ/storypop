@@ -72,6 +72,8 @@ export const generatePreview = inngest.createFunction(
         childAge: book.childAge as number,
         pronouns: (book.pronouns as string) ?? "they/them",
         archetype: book.archetype as string,
+        description: (book.description as string | null) ?? null,
+        favorites: (book.favorites as string | null) ?? null,
       }),
     );
 
@@ -128,6 +130,17 @@ export const generatePreview = inngest.createFunction(
         })
         .returning({ id: previews.id });
       return inserted[0]?.id;
+    });
+
+    // Denormalize previewPages onto the listings row too. fulfillment.ts
+    // reads listings.previewPages to decide which pages still need
+    // rendering — without this update it would re-render pages 0..2 after
+    // payment, double-charging in fal credits.
+    await step.run("denormalize-preview-pages", async () => {
+      await db
+        .update(listings)
+        .set({ previewPages, updatedAt: new Date() })
+        .where(eq(listings.id, bookId));
     });
 
     await step.run("track-cost", () =>

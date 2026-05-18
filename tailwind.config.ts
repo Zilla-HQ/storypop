@@ -44,11 +44,28 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // StoryPop brand palette — ported from storypop.shop so the
+        // marketing surface (landing + create + preview) reads as the
+        // same product. shadcn HSL vars above remain authoritative for
+        // any components/ui/* primitives.
+        sunshine: "#FFD93D",
+        coral: "#FF6B9D",
+        sky: "#6BCBFF",
+        mint: "#6BE3B5",
+        ink: "#2A2A4A",
+        cream: "#FFF8EC",
+      },
+      fontFamily: {
+        display: ["ui-rounded", "Quicksand", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        bubble: "1.5rem",
+      },
+      boxShadow: {
+        soft: "0 10px 40px -12px rgba(255,107,157,0.25)",
       },
       keyframes: {
         "accordion-down": {

@@ -5,11 +5,18 @@ import { generatePreview } from "@/inngest/functions/preview";
 import { fulfillment } from "@/inngest/functions/fulfillment";
 import { abandonedCartFn } from "@/inngest/functions/abandoned-cart";
 import { photoPurgeFn } from "@/inngest/functions/photo-purge";
+import { previewReadyEmail } from "@/inngest/functions/preview-ready-email";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [generatePreview, fulfillment, abandonedCartFn, photoPurgeFn],
+  functions: [
+    generatePreview,
+    fulfillment,
+    abandonedCartFn,
+    photoPurgeFn,
+    previewReadyEmail,
+  ],
 });

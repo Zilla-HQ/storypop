@@ -81,23 +81,21 @@ export async function lockCharacter(input: CharacterLockInput): Promise<Characte
     };
   }
 
-  // Real call: fal.ai's LoRA-training endpoint. The exact model id depends
-  // on which Flux variant we're on; resolved at runtime from env.
-  const trainModel = env("FAL_LORA_TRAIN_MODEL", "fal-ai/flux-lora-fast-training")!;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = (await fal.subscribe(trainModel, {
-    input: {
-      images_data_url: input.photoUrl,
-      steps: 1000,
-      trigger_word: "STORYPOPKID",
-    } as any,
-    logs: false,
-  })) as unknown as { data: { diffusers_lora_file: { url: string } } };
-
+  // Single-photo character-lock: we use flux-pulid which takes one reference
+  // image per generation request and matches the face identity into each
+  // scene. No training step — the photo URL itself is the "lora identifier"
+  // and we pass it to generatePageIllustration verbatim.
+  //
+  // Previous implementation called fal-ai/flux-lora-fast-training which
+  // expects a ZIP archive of training images (not a single photo URL),
+  // so every customer submission failed with 422 Unprocessable Entity and
+  // fell back to the default LoRA — the kid in the book wasn't theirs.
+  // This is the bug Phillip reported (customer-impact: every single
+  // photo-upload submission since launch).
   return {
-    loraId: result.data.diffusers_lora_file.url,
+    loraId: input.photoUrl,
     isDefault: false,
-    estCostCents: 18,
+    estCostCents: 0,
   };
 }
 
@@ -121,18 +119,29 @@ export interface PageGenResult {
 }
 
 /**
- * Generate one page illustration. Retries once with a more conservative
- * prompt on a moderation flag.
+ * Generate one page illustration. Two paths:
+ *
+ *   - With photo (isDefaultLora=false): loraId is the photo URL. Uses
+ *     fal-ai/flux-pulid which takes one reference image per request and
+ *     bakes the face identity into the rendered scene. Same model
+ *     storypop.shop used with reliable face-consistency.
+ *
+ *   - Without photo (isDefaultLora=true): text-only via fal-ai/flux/dev
+ *     for higher-fidelity rendering. Hard-locked character description
+ *     comes from the parent's `description` field via the Claude system
+ *     prompt; storypop.shop's experience confirmed this stays consistent
+ *     across pages when the description is specific.
+ *
+ * Retries once with a softened prompt on NSFW flag. Two flags → throws
+ * ContentSafetyError which fulfillment.ts catches to auto-refund.
  */
 export async function generatePageIllustration(input: PageGenInput): Promise<PageGenResult> {
-  const baseModel = env("FAL_LORA_BASE_MODEL", "fal-ai/flux-lora")!;
   const stylePrompt = STYLE_PRESETS[input.stylePreset];
   const prompt = [
     SAFETY_PREAMBLE,
     stylePrompt,
     `Scene: ${input.sceneDescription}`,
-    `The protagonist is STORYPOPKID${input.isDefaultLora ? "" : " (locked-character LoRA)"}.`,
-    `Composition varies from prior pages.`,
+    `Composition varies from prior pages — different camera angle / framing.`,
   ].join(" ");
 
   let retries = 0;
@@ -141,31 +150,41 @@ export async function generatePageIllustration(input: PageGenInput): Promise<Pag
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      const usedPrompt = attempt === 0 ? prompt : softenPrompt(prompt);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const out = (await fal.subscribe(baseModel, {
-        input: {
-          prompt: attempt === 0 ? prompt : softenPrompt(prompt),
-          loras: input.isDefaultLora ? [] : [{ path: input.loraId, scale: 1.0 }],
-          image_size: "square_hd",
-          num_inference_steps: 28,
-          // IMPORTANT: when fal's safety checker trips it returns a SOLID
-          // BLACK PLACEHOLDER image at full resolution rather than failing.
-          // We compose that into the customer PDF and the page renders as
-          // a blank black rectangle — confirmed bug in the v1 prod deploy.
-          //
-          // We disable the checker here because every prompt going to fal
-          // is composed from our SAFETY_PREAMBLE + a Claude-generated scene
-          // that's already constrained by the kids-book system prompt. The
-          // false-positive rate on innocent scenes (warriors, monsters,
-          // peril words) was unacceptable for a paid product. Keeping the
-          // has_nsfw_concepts check below as a defense-in-depth read on
-          // anything fal still flags server-side.
-          enable_safety_checker: false,
-        } as any,
-        logs: false,
-      })) as unknown as {
-        data: { images: { url: string }[]; has_nsfw_concepts?: boolean[] };
-      };
+      let out: { data: { images: { url: string }[]; has_nsfw_concepts?: boolean[] } };
+
+      if (!input.isDefaultLora && input.loraId.startsWith("http")) {
+        // Photo path — flux-pulid with the customer's photo as identity ref.
+        out = (await fal.subscribe("fal-ai/flux-pulid", {
+          input: {
+            prompt: usedPrompt,
+            reference_image_url: input.loraId,
+            image_size: "square_hd",
+            num_inference_steps: 20,
+            guidance_scale: 4,
+            true_cfg: 1.5,
+            id_weight: 1.0,
+            // safety_checker disabled — it returns SOLID BLACK images for
+            // false positives on innocent kid scenes (warriors, monsters,
+            // peril words). Confirmed customer-impact bug on v1.
+            enable_safety_checker: false,
+          } as any,
+          logs: false,
+        })) as never;
+      } else {
+        // No-photo path — flux/dev text-only.
+        out = (await fal.subscribe("fal-ai/flux/dev", {
+          input: {
+            prompt: usedPrompt,
+            image_size: "square_hd",
+            num_inference_steps: 28,
+            num_images: 1,
+            enable_safety_checker: false,
+          } as any,
+          logs: false,
+        })) as never;
+      }
 
       const nsfw = out.data.has_nsfw_concepts?.[0] ?? false;
       if (nsfw) {

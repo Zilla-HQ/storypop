@@ -74,7 +74,7 @@ export async function sendComplianceEmail(args: SendEmailArgs): Promise<SendEmai
          <mj-text font-size="11px" color="#64748b" line-height="1.5">
            ${escapeHtml(BUSINESS_NAME)} &nbsp;·&nbsp; ${escapeHtml(BUSINESS_ADDRESS)}
            <br/>
-           You're receiving this because your listing appeared on a public MLS. We're a real estate photo enhancement service.
+           ${escapeHtml(env("EMAIL_FOOTER_EXPLANATION", "You're receiving this because you submitted a book request on storypop.shop.")!)}
            <br/>
            <a href="${unsubUrl}" style="color:#64748b;text-decoration:underline;">Unsubscribe</a>
          </mj-text>
@@ -96,9 +96,14 @@ export async function sendComplianceEmail(args: SendEmailArgs): Promise<SendEmai
     `\n\n--\n${BUSINESS_NAME} · ${BUSINESS_ADDRESS}\nUnsubscribe: ${unsubUrl}\n`;
 
   // Resend's shared sandbox sender (`resend.dev`) only accepts `onboarding@`
-  // as the from-address. Use the brand-prefixed user otherwise.
+  // as the from-address. Use a brand-aligned user otherwise.
+  //
+  // EMAIL_FROM_USER defaults to "hello" — sensible for a B2C transactional
+  // sender. The merchant-template ancestor defaulted to "outreach" which
+  // was correct for cold real-estate emails but would be jarring on a
+  // book-delivery confirmation. Operators can override via env.
   const isSharedSender = args.fromDomain === "resend.dev";
-  const fromUser = isSharedSender ? "onboarding" : "outreach";
+  const fromUser = isSharedSender ? "onboarding" : env("EMAIL_FROM_USER", "hello")!;
   const from = `${args.fromName ?? BUSINESS_NAME} <${fromUser}@${args.fromDomain}>`;
 
   // Replies go to a brand-aligned mailbox so recipients never see the

@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── shadcn/ui CSS tokens (keep before brand styles so brand wins) ─── */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -23,34 +24,734 @@
     --ring: 222 47% 11%;
     --radius: 0.75rem;
   }
-
-  .dark {
-    --background: 222 47% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 6%;
-    --card-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 12%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 12%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 12%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 12%;
-    --input: 217 33% 12%;
-    --ring: 212 27% 84%;
-  }
-}
-
-@layer base {
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #FFF8EC;
+  --ink: #2A2A4A;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-rounded, "Quicksand", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-bubble bg-coral text-white font-bold px-6 py-3 shadow-soft hover:scale-[1.02] active:scale-[0.98] transition;
+}
+
+/* ====================================================================
+   Disney-grade homepage animations
+   ==================================================================== */
+
+/* CTA glow — uniform pink halo around the whole button perimeter. Same
+   color family as the coral button so it reads as "lit" instead of
+   contrasting. Stack of zero-offset box-shadows from light-pink-tight to
+   soft-pink-wide so the falloff is even on every side. */
+.btn-magic {
+  position: relative;
+  isolation: isolate;
+  box-shadow:
+    /* button face — gentle dimensionality */
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.10),
+    /* tight ring of light pastel pink — defines the edge as "lit" */
+    0 0 0 2px rgba(255, 200, 220, 0.65),
+    /* warm pink mid-aura — the main glow */
+    0 0 20px 0 rgba(255, 175, 205, 0.85),
+    /* coral-pink outer aura — extends the halo, stays in the same hue */
+    0 0 44px 6px rgba(255, 140, 185, 0.55),
+    /* soft pink atmosphere — fades the glow into the page */
+    0 0 80px 18px rgba(255, 130, 170, 0.30);
+  animation: btn-glow-pulse 2.6s ease-in-out infinite;
+}
+
+.btn-magic:hover {
+  animation: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.10),
+    0 0 0 3px rgba(255, 200, 220, 0.8),
+    0 0 28px 2px rgba(255, 175, 205, 1),
+    0 0 56px 10px rgba(255, 140, 185, 0.7),
+    0 0 100px 24px rgba(255, 130, 170, 0.4);
+}
+
+/* Pulse animates the box-shadow stack between a "soft" and "bright" state.
+   All pink — no yellow contrast. */
+@keyframes btn-glow-pulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.10),
+      0 0 0 2px rgba(255, 200, 220, 0.55),
+      0 0 16px 0 rgba(255, 175, 205, 0.7),
+      0 0 36px 4px rgba(255, 140, 185, 0.45),
+      0 0 64px 12px rgba(255, 130, 170, 0.22);
   }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.10),
+      0 0 0 3px rgba(255, 200, 220, 0.8),
+      0 0 26px 4px rgba(255, 175, 205, 1),
+      0 0 56px 10px rgba(255, 140, 185, 0.65),
+      0 0 96px 22px rgba(255, 130, 170, 0.4);
+  }
+}
+
+/* Respect reduced-motion: hold the glow at peak, no pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .btn-magic { animation: none; }
+}
+
+/* "starring your kid" — slow warm coral→sunshine shimmer (brand only).
+   `pb` + slight negative `mb` give the background-clip mask room for
+   descenders ("y", "p") without changing the visual baseline. Needed
+   because `inline-block` + `background-clip: text` will clip the gradient
+   at the box bounds, not at the glyph bounds. */
+.text-magic {
+  background: linear-gradient(100deg, #FF6B9D 0%, #FFAA5C 50%, #FF6B9D 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 6s ease-in-out infinite;
+  display: inline-block;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+@keyframes text-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* Hero copy entrance — gentle bounce-in */
+.hero-fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: hero-fade-up 0.9s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+@keyframes hero-fade-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sample tile: stagger fade-in + hover lift with subtle tilt */
+.tile {
+  opacity: 0;
+  transform: translateY(24px) scale(0.96);
+  animation: tile-rise 0.7s cubic-bezier(0.34, 1.5, 0.64, 1) forwards;
+  transition: transform 0.35s cubic-bezier(0.34, 1.5, 0.64, 1), box-shadow 0.3s ease;
+  cursor: pointer;
+}
+.tile:hover {
+  transform: translateY(-6px) scale(1.03) rotate(-0.6deg);
+  box-shadow: 0 24px 50px -16px rgba(255, 107, 157, 0.4);
+}
+.tile:nth-child(even):hover { transform: translateY(-6px) scale(1.03) rotate(0.6deg); }
+@keyframes tile-rise {
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.tile:nth-child(1)  { animation-delay: 0.05s; }
+.tile:nth-child(2)  { animation-delay: 0.12s; }
+.tile:nth-child(3)  { animation-delay: 0.19s; }
+.tile:nth-child(4)  { animation-delay: 0.26s; }
+.tile:nth-child(5)  { animation-delay: 0.33s; }
+.tile:nth-child(6)  { animation-delay: 0.40s; }
+.tile:nth-child(7)  { animation-delay: 0.47s; }
+.tile:nth-child(8)  { animation-delay: 0.54s; }
+.tile:nth-child(9)  { animation-delay: 0.61s; }
+.tile:nth-child(10) { animation-delay: 0.68s; }
+
+/* Star twinkle for review ratings */
+.twinkle {
+  display: inline-block;
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+.twinkle:nth-child(1) { animation-delay: 0s; }
+.twinkle:nth-child(2) { animation-delay: 0.3s; }
+.twinkle:nth-child(3) { animation-delay: 0.6s; }
+.twinkle:nth-child(4) { animation-delay: 0.9s; }
+.twinkle:nth-child(5) { animation-delay: 1.2s; }
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  50%      { opacity: 1; transform: scale(1.18); filter: drop-shadow(0 0 4px rgba(255,217,61,0.9)); }
+}
+
+/* Step number bounce on hover */
+.step-num {
+  transition: transform 0.3s cubic-bezier(0.34, 1.6, 0.64, 1);
+}
+.card:hover .step-num {
+  transform: scale(1.15) rotate(-8deg);
+}
+
+/* ====================================================================
+   Magic Flow — three-stage product demo with a magic pulse
+   traveling left → right, activating each stage as it passes.
+   Loop = 4.5s. All 3 stages visible at once.
+   ==================================================================== */
+
+.flow {
+  position: relative;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 36px 24px;
+  background: linear-gradient(180deg, #FFF8EC 0%, #fff 100%);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px -30px rgba(255,107,157,0.25), inset 0 0 0 1px rgba(42,42,74,0.06);
+  overflow: hidden;
+}
+
+.flow-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+@media (max-width: 720px) {
+  .flow-row {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .flow-connector { display: none; }
+}
+
+/* Panel that contains each stage's visual */
+.flow-panel {
+  position: relative;
+  background: white;
+  border-radius: 22px;
+  box-shadow: 0 16px 40px -20px rgba(42,42,74,0.18);
+  height: 240px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.5s ease;
+  overflow: hidden;
+}
+.flow-panel::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 0 rgba(255,107,157,0);
+  background: radial-gradient(60% 80% at 50% 50%, rgba(255,217,61,0), transparent 70%);
+  animation: panel-active 4.5s ease-in-out infinite;
+}
+.flow-panel-1::after { animation-delay: 0s; }
+.flow-panel-2::after { animation-delay: 1.5s; }
+.flow-panel-3::after { animation-delay: 3s; }
+@keyframes panel-active {
+  0%, 88%, 100% {
+    box-shadow: inset 0 0 0 0 rgba(255,107,157,0);
+    background: radial-gradient(60% 80% at 50% 50%, rgba(255,217,61,0), transparent 70%);
+  }
+  20%, 33% {
+    box-shadow: inset 0 0 0 3px rgba(255,107,157,0.55);
+    background: radial-gradient(60% 80% at 50% 50%, rgba(255,217,61,0.18), transparent 70%);
+  }
+}
+.flow-panel-1 { animation: panel-bob 4.5s ease-in-out infinite 0s; }
+.flow-panel-2 { animation: panel-bob 4.5s ease-in-out infinite 1.5s; }
+.flow-panel-3 { animation: panel-bob 4.5s ease-in-out infinite 3s; }
+@keyframes panel-bob {
+  0%, 88%, 100% { transform: translateY(0); }
+  20%, 33%      { transform: translateY(-4px); }
+}
+
+/* Connector lines between panels — the magic pulse travels through these */
+.flow-connector {
+  position: relative;
+  width: 50px; height: 4px;
+  background: rgba(42,42,74,0.08);
+  border-radius: 2px;
+  overflow: visible;
+}
+.flow-connector::before {
+  content: "";
+  position: absolute; left: -10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px;
+  background: radial-gradient(circle, #FFD93D 0%, #FF6B9D 70%, transparent 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 16px #FFD93D, 0 0 28px rgba(255,107,157,0.6);
+  animation: pulse-travel 4.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  opacity: 0;
+}
+.flow-connector-1::before { animation-delay: 0.9s; }
+.flow-connector-2::before { animation-delay: 2.4s; }
+@keyframes pulse-travel {
+  0%   { transform: translate(-10px, -50%) scale(0.4); opacity: 0; }
+  10%  { opacity: 1; transform: translate(-5px, -50%) scale(1); }
+  85%  { opacity: 1; transform: translate(50px, -50%) scale(1); }
+  100% { transform: translate(60px, -50%) scale(0.4); opacity: 0; }
+}
+.flow-connector::after {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+  background: linear-gradient(90deg, #FFD93D, #FF6B9D);
+  border-radius: 2px;
+  animation: pulse-fill 4.5s ease-in-out infinite;
+}
+.flow-connector-1::after { animation-delay: 0.9s; }
+.flow-connector-2::after { animation-delay: 2.4s; }
+@keyframes pulse-fill {
+  0%, 100% { width: 0; }
+  20%      { width: 100%; }
+  50%      { width: 100%; opacity: 0.4; }
+  85%      { width: 0; opacity: 0; }
+}
+
+/* Stage labels under each panel */
+.flow-stage-label {
+  text-align: center;
+  margin-top: 14px;
+}
+.flow-stage-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #FF6B9D; color: white; font-weight: 900; font-size: 12px;
+  margin-right: 8px; vertical-align: middle;
+}
+.flow-stage-title {
+  font-weight: 900; font-size: 17px; color: #2A2A4A; vertical-align: middle;
+}
+.flow-stage-body {
+  font-size: 13px; color: rgba(42,42,74,0.65); margin-top: 4px;
+  line-height: 1.4;
+}
+
+
+/* ----- Stage 1: form card visual ----- */
+.flow-card {
+  width: 86%;
+  background: linear-gradient(180deg, #FFF8EC 0%, white 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 20px -10px rgba(42,42,74,0.15);
+}
+.flow-input {
+  background: white; border-radius: 8px; padding: 8px 12px;
+  font-weight: 800; font-size: 14px; color: #2A2A4A;
+  border: 2px solid rgba(42,42,74,0.08);
+  margin-bottom: 10px;
+  position: relative;
+}
+.flow-pills { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+.flow-pill {
+  padding: 4px 9px; border-radius: 999px;
+  background: rgba(42,42,74,0.06); font-size: 11px; font-weight: 700;
+  color: rgba(42,42,74,0.55);
+}
+.flow-pill-active {
+  background: #FF6B9D; color: white;
+}
+.flow-photo-box {
+  border: 2px dashed rgba(42,42,74,0.18);
+  border-radius: 8px;
+  height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(42,42,74,0.4);
+  font-size: 11px; font-weight: 700;
+  background: linear-gradient(120deg, rgba(255,217,61,0.15) 0%, rgba(255,107,157,0.15) 100%);
+}
+
+/* ----- Stage 2: magic transformation visual ----- */
+.flow-magic-core {
+  position: relative; width: 150px; height: 150px;
+}
+.flow-magic-orb {
+  position: absolute; inset: 35%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFD93D 0%, #FF6B9D 65%, transparent 100%);
+  animation: flow-orb-pulse 1.8s ease-in-out infinite;
+}
+@keyframes flow-orb-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.85; box-shadow: 0 0 20px rgba(255,217,61,0.4); }
+  50%      { transform: scale(1.2); opacity: 1;    box-shadow: 0 0 40px rgba(255,217,61,0.7); }
+}
+.flow-magic-ring {
+  position: absolute; inset: 25%;
+  border: 2px solid rgba(255,107,157,0.4);
+  border-radius: 50%;
+  animation: flow-ring-expand 2.4s ease-out infinite;
+}
+.flow-magic-ring-2 { animation-delay: 0.8s; }
+.flow-magic-ring-3 { animation-delay: 1.6s; }
+@keyframes flow-ring-expand {
+  0%   { transform: scale(0.6); opacity: 1; border-color: rgba(255,217,61,0.7); }
+  100% { transform: scale(1.6); opacity: 0; border-color: rgba(255,107,157,0.1); }
+}
+.flow-spark {
+  position: absolute; left: 50%; top: 50%;
+  width: 6px; height: 6px;
+  background: #FFD93D; border-radius: 50%;
+  box-shadow: 0 0 10px #FFD93D;
+  animation: flow-spark-orbit 3s linear infinite;
+}
+.flow-spark-1 { animation-delay: 0s; }
+.flow-spark-2 { animation-delay: 0.5s; background: #FF6B9D; box-shadow: 0 0 10px #FF6B9D; }
+.flow-spark-3 { animation-delay: 1s; }
+.flow-spark-4 { animation-delay: 1.5s; background: #FF6B9D; box-shadow: 0 0 10px #FF6B9D; }
+.flow-spark-5 { animation-delay: 2s; }
+.flow-spark-6 { animation-delay: 2.5s; background: #FF6B9D; box-shadow: 0 0 10px #FF6B9D; }
+@keyframes flow-spark-orbit {
+  0%   { transform: rotate(0deg)   translateX(70px) scale(0.5); opacity: 0; }
+  10%, 90% { opacity: 1; }
+  100% { transform: rotate(360deg) translateX(70px) scale(1.1); opacity: 0; }
+}
+
+/* ----- Stage 3: book opening with kid illustration inside ----- */
+.flow-book {
+  position: relative;
+  width: 220px; height: 160px;
+  perspective: 1200px;
+}
+.flow-book-inner {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  animation: flow-book-bob 3.5s ease-in-out infinite;
+}
+@keyframes flow-book-bob {
+  0%, 100% { transform: rotateX(8deg) rotateY(-15deg); }
+  50%      { transform: rotateX(8deg) rotateY(-8deg) translateY(-6px); }
+}
+.flow-book-page {
+  position: absolute; top: 0; bottom: 0;
+  background: #FFF8EC;
+  box-shadow: inset 0 0 25px rgba(0,0,0,0.05);
+}
+.flow-book-page-left  { left: 0;  width: 50%; border-radius: 8px 2px 2px 8px; padding: 14px 12px; }
+.flow-book-page-right { right: 0; width: 50%; border-radius: 2px 8px 8px 2px;
+  background: linear-gradient(135deg, #FFD93D 0%, #FF6B9D 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.flow-book-illustration {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff, transparent 60%), #2A2A4A;
+  position: relative;
+  animation: flow-illust-glow 2s ease-in-out infinite;
+}
+@keyframes flow-illust-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
+  50%      { box-shadow: 0 0 0 14px rgba(255,255,255,0); }
+}
+.flow-book-line {
+  display: block;
+  height: 3px; background: rgba(42,42,74,0.12); border-radius: 2px;
+  margin-bottom: 6px;
+}
+.flow-book-line-w-80 { width: 80%; }
+.flow-book-line-w-60 { width: 60%; }
+.flow-book-line-w-90 { width: 90%; }
+
+.flow-book-spine {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 3px;
+  background: rgba(42,42,74,0.15); transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .btn-magic, .text-magic, .hero-sparkle,
+  .hero-fade-up, .tile, .twinkle, .step-num {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-bubble bg-white text-ink font-bold px-6 py-3 border-2 border-ink/10 hover:bg-cream transition;
+}
+
+.card {
+  @apply rounded-bubble bg-white shadow-soft p-6;
+}
+
+.confetti-pop {
+  animation: pop 0.5s ease-out;
+}
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ====================================================================
+   Preview-page conversion UI — locked pages, 3D book, trust bar, sticky CTA
+   ==================================================================== */
+
+/* Hero spread — the SINGLE preview page rendered as a real book spread.
+   Image takes ~58% of the row on desktop, text takes ~42%. Image gets a
+   subtle drop shadow + warm rim so it reads as a printed page, not a
+   web tile. Margin is generous because this image is the whole pitch. */
+.hero-spread {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0 auto;
+  max-width: 980px;
+  padding: 28px;
+  background: white;
+  border-radius: 32px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.8) inset,
+    0 30px 60px -30px rgba(42, 42, 74, 0.25),
+    0 10px 30px -10px rgba(255, 107, 157, 0.15);
+}
+@media (min-width: 768px) {
+  .hero-spread {
+    flex-direction: row;
+    align-items: stretch;
+    padding: 36px;
+    gap: 40px;
+  }
+}
+.hero-spread-image-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #fff8ec;
+  box-shadow:
+    0 8px 24px -8px rgba(42, 42, 74, 0.35),
+    0 1px 0 rgba(255,255,255,0.5) inset,
+    0 0 0 1px rgba(42, 42, 74, 0.06);
+}
+@media (min-width: 768px) {
+  .hero-spread-image-wrap {
+    flex: 0 0 58%;
+    aspect-ratio: 1 / 1;
+  }
+}
+.hero-spread-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hero-spread-text-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  padding: 4px 0;
+}
+.hero-spread-page-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #FF6B9D;
+  letter-spacing: 1.5px;
+  margin-bottom: 14px;
+}
+.hero-spread-page-of {
+  color: rgba(42,42,74,0.45);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.hero-spread-text {
+  font-family: ui-rounded, "Quicksand", system-ui;
+  font-size: 22px;
+  line-height: 1.45;
+  color: #2A2A4A;
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .hero-spread-text {
+    font-size: 26px;
+    line-height: 1.4;
+  }
+}
+.hero-spread-tagline {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(42,42,74,0.15);
+  font-size: 14px;
+  color: rgba(42,42,74,0.65);
+  line-height: 1.5;
+}
+
+/* Locked page tiles (pages 4-12). Text is blurred and overlayed with a
+   "🔒 Unlock" badge — the missing book is visible but gated. */
+.locked-page {
+  background: linear-gradient(135deg, #fff 0%, #fff8ec 100%);
+  border: 1px dashed rgba(42, 42, 74, 0.15);
+  min-height: 140px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.locked-page:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -10px rgba(255, 107, 157, 0.25);
+}
+.locked-text {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.7;
+}
+.locked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(255,248,236,0) 0%, rgba(255,248,236,0.5) 50%, rgba(255,248,236,0.85) 100%);
+  pointer-events: none;
+}
+.locked-badge {
+  background: white;
+  border: 1.5px solid #FF6B9D;
+  color: #FF6B9D;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.2);
+  letter-spacing: 0.5px;
+}
+
+/* 3D hardcover book mockup using the child's actual page-1 illustration
+   as the cover. CSS-only — no PNG mockup overlay needed. */
+.book-mockup-container {
+  perspective: 1200px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.book-mockup {
+  position: relative;
+  width: 160px;
+  height: 200px;
+  transform-style: preserve-3d;
+  transform: rotateY(-22deg) rotateX(4deg);
+  animation: book-float 6s ease-in-out infinite;
+}
+@keyframes book-float {
+  0%, 100% { transform: rotateY(-22deg) rotateX(4deg) translateY(0); }
+  50%      { transform: rotateY(-18deg) rotateX(4deg) translateY(-6px); }
+}
+.book-mockup-cover {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px 8px 8px 4px;
+  overflow: hidden;
+  box-shadow:
+    -3px 3px 0 0 rgba(0,0,0,0.06),
+    -6px 6px 0 0 rgba(0,0,0,0.04),
+    20px 30px 50px -15px rgba(0,0,0,0.45);
+  background: white;
+  transform: translateZ(8px);
+}
+.book-mockup-title {
+  position: absolute;
+  bottom: 10px;
+  left: 8px;
+  right: 8px;
+  text-align: center;
+  font-family: ui-rounded, system-ui;
+  font-weight: 900;
+  font-size: 11px;
+  color: white;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  line-height: 1.15;
+  letter-spacing: 0.3px;
+}
+.book-mockup-spine {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 14px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 100%);
+  border-radius: 4px 0 0 4px;
+  transform: translateZ(2px);
+}
+.book-mockup-pages {
+  position: absolute;
+  right: -4px;
+  top: 4px;
+  bottom: 4px;
+  width: 6px;
+  background: repeating-linear-gradient(
+    180deg,
+    #f3ead8 0px, #f3ead8 1px,
+    #d8cfb8 1px, #d8cfb8 2px
+  );
+  border-radius: 0 2px 2px 0;
+  box-shadow: 1px 0 0 rgba(0,0,0,0.1);
+}
+
+/* Trust bar — promotes the guarantee from 12px gray footer to a real bar.
+   This is the highest-impact element for killing "is this scammy?" fear. */
+.trust-bar {
+  background: #fff;
+  border: 2px solid rgba(255, 107, 157, 0.15);
+  border-radius: 24px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 6px 20px -8px rgba(255, 107, 157, 0.18);
+}
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: rgba(42, 42, 74, 0.85);
+  line-height: 1.35;
+}
+.trust-item strong { color: #2A2A4A; font-weight: 800; }
+.trust-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+/* Sticky mobile CTA bar — keeps buy buttons in reach while scrolling 12 pages. */
+.sticky-cta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px calc(env(safe-area-inset-bottom, 12px) + 12px);
+  background: rgba(255, 248, 236, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(42, 42, 74, 0.08);
+  display: flex;
+  gap: 10px;
+  z-index: 50;
+  box-shadow: 0 -8px 20px -8px rgba(0,0,0,0.12);
+}
+.sticky-cta .btn-primary {
+  padding: 12px 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Post-purchase "finalizing your book" dots — gentle pulse while the user
+   waits the 1-3 min for the webhook to compile their PDF. */
+.loader-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FF6B9D;
+  animation: loader-pulse 1.4s ease-in-out infinite;
+}
+.loader-dot-2 { animation-delay: 0.2s; }
+.loader-dot-3 { animation-delay: 0.4s; }
+@keyframes loader-pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40%           { opacity: 1; transform: scale(1); }
 }

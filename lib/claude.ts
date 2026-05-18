@@ -47,6 +47,11 @@ export async function draftStory(args: {
   childAge: number;
   pronouns: string;
   archetype: string;
+  /** Parent's free-form description ("super silly, loves dinosaurs"). */
+  description?: string | null;
+  /** Parent's free-form favorites ("Bluey, dragons, Frozen"). Claude maps
+   *  trademarked names → generic archetypes per the translation map below. */
+  favorites?: string | null;
 }): Promise<DraftedStory> {
   const ageBand =
     args.childAge <= 4 ? "2-4 (very simple, rhyming, repetition)"
@@ -54,22 +59,66 @@ export async function draftStory(args: {
     : "8-10 (richer vocabulary, light arcs)";
   const pageCount = args.archetype === "bedtime" ? 14 : 16;
 
+  // Trademark-safe translation map. When the parent's favorites field
+  // mentions a specific franchise, render the *vibe* without naming it.
+  // Same list maintained on storypop.shop's /create form chips so the
+  // story always feels familiar to the kid.
+  const translationMap = `TRANSLATION MAP — popular kids' franchises → trademark-safe archetypes:
+- Bluey → sunny family backyard, family puppy, imaginative pretend games
+- Paw Patrol → kid-sized rescue heroes with friendly puppy companions
+- Peppa Pig → silly muddy-puddle family adventures with farm-animal friends (the hero stays a HUMAN child, animals are friends)
+- Cocomelon / Baby Shark → bright nursery-rhyme world with simple sing-song adventures and friendly sea creatures
+- Mickey Mouse / Sesame Street → enchanted neighborhood with friendly cartoon-creature pals (kid is human, visits them)
+- Daniel Tiger / Thomas & Friends → cozy neighborhood / small-town railway adventure with personality-filled engines
+- Frozen → snowy mountain palace, magical ice powers, friendly snowman, sibling bond
+- Encanto → magical family in a colorful mountain house, each member with a tiny gift
+- Moana → tropical island voyage, friendly sea creatures, brave-girl-meets-ocean spirit
+- Lion King → sun-baked savanna, kid befriends a brave young lion-cub (kid stays HUMAN)
+- Toy Story → bedroom toys come alive, friendly space-ranger toy companion
+- Cars → bright town of friendly racing cars and trucks with personality
+- Finding Nemo → coral reef adventure, lost-and-found friendly clownfish family
+- Inside Out → colorful inner-feelings adventure with small emotion-creature helpers
+- How to Train Your Dragon → cliffside viking village + young friendly dragon best friend
+- Trolls / Minions → bright musical creature friends / silly yellow helper companions
+- Barbie → glamorous pink dream-house adventures, kid as fashion-loving hero
+- My Little Pony → magical winged-horse friends in a rainbow valley
+- Hello Kitty / Sanrio → pastel cute-character pals
+- Pokemon → tall-grass adventure, cute pocket-monster creature companions
+- Mario → mushroom kingdom, warp pipes, friendly princess, plumber hero
+- Sonic → super-fast running through bright green hills with a speedy blue friend
+- Minecraft / Roblox → blocky cube-world building / playful imagination-game world
+- Spider-Man / Avengers / Star Wars / Harry Potter → kid-sized superhero web-swinging / team of kid heroes / brave young space-knight + droids / magical castle-school
+Animals & themes (dinosaurs, dragons, mermaids, unicorns, princesses, knights, pirates, space, wizards, superheroes, horses, trains, cars and trucks, robots, ninjas, monsters) → use literally.`;
+
   const system = `You are a children's book author. Draft a ${pageCount}-page story for the given inputs.
 Every page is 1-3 sentences and ends with a beat that gives the illustrator a clear scene.
 Respect age-band reading level: ${ageBand}.
 Output STRICT JSON: { "title": string, "dedication": string, "pages": [{ "sceneDescription": string, "body": string }] }.
 No commentary, no markdown, just JSON.
+
 HARD RULES:
+- The hero is ALWAYS a HUMAN CHILD. Never an animal or non-human creature; any animals appear as companions BESIDE the child, never AS the child.
 - No violence beyond mild peril. No romance/sexuality. No real-world political figures.
-- No branded characters (Disney, Marvel, Pokémon, Bluey, Paw Patrol, Sesame Street, etc).
+- NEVER name copyrighted characters, places, or songs (Disney, Marvel, Pokémon, Bluey, Paw Patrol, Sesame Street, Frozen's Elsa, etc). Use generic archetypes.
 - No weapons, no substance use, no scary monsters with realistic features.
-- Bedtime archetype ends with the protagonist asleep.`;
+- Bedtime archetype ends with the protagonist asleep.
+
+${translationMap}`;
+
+  const personalitySection = args.description?.trim()
+    ? `- Personality (parent's own words): ${args.description.trim()}`
+    : "";
+  const favoritesSection = args.favorites?.trim()
+    ? `- What this kid loves (translate the *vibe* without naming trademarks): ${args.favorites.trim()}`
+    : "";
 
   const user = `Inputs:
 - Name: ${args.childName}
 - Age: ${args.childAge}
 - Pronouns: ${args.pronouns}
-- Archetype: ${args.archetype}`;
+- Archetype: ${args.archetype}
+${personalitySection}
+${favoritesSection}`.trim();
 
   const raw = await callClaude({ system, user, maxTokens: 2500 });
   const cleaned = raw.replace(/^```json\s*|\s*```$/g, "").trim();
