@@ -35,7 +35,7 @@ export default function LandingPage() {
           className="hero-fade-up inline-block bg-sunshine/40 text-ink px-4 py-1 rounded-bubble text-sm font-bold mb-4 relative"
           style={{ animationDelay: "0s" }}
         >
-          12-page personalized book · printed-quality PDF · $9
+          16-page personalized book · printed-quality PDF · $14.99
         </span>
         <h1
           className="hero-fade-up text-5xl md:text-7xl font-display font-black tracking-tight leading-[1.05] mb-6 relative"
@@ -49,7 +49,7 @@ export default function LandingPage() {
           style={{ animationDelay: "0.25s" }}
         >
           Tell us your kid&apos;s name, describe their personality, and name a few
-          things they love. We write &amp; illustrate a custom 12-page adventure
+          things they love. We write &amp; illustrate a custom 16-page adventure
           starring them. Ready in 2 minutes.{" "}
           <span className="text-ink/50">Photo optional.</span>
         </p>
@@ -58,7 +58,7 @@ export default function LandingPage() {
           style={{ animationDelay: "0.4s" }}
         >
           <Link href="/create" className="btn-primary btn-magic text-lg px-8 py-4">
-            Start my book — $9
+            Start my book — $14.99
           </Link>
           <a href="#how" className="btn-secondary text-lg px-8 py-4">
             See how it works
@@ -142,7 +142,7 @@ export default function LandingPage() {
             href="/create"
             className="btn-magic inline-flex items-center justify-center rounded-bubble bg-white text-coral font-black px-8 py-4 text-lg shadow-soft hover:scale-[1.02] transition"
           >
-            Start my book — $9
+            Start my book — $14.99
           </Link>
         </div>
       </section>
@@ -188,7 +188,7 @@ const testimonials = [
 const faqs = [
   {
     q: "How long does it take?",
-    a: "About 2 minutes from upload to preview. The full 12-page book is generated within 5 minutes after checkout.",
+    a: "About 2 minutes from upload to preview. The full 16-page book is generated within 5 minutes after checkout.",
   },
   {
     q: "What ages is this for?",
@@ -196,7 +196,7 @@ const faqs = [
   },
   {
     q: "Can I print it?",
-    a: "Yes — you get a print-ready 8.5\"×8.5\" PDF. Or upgrade to a real hardcover ($39, ships in 7–10 days) at checkout.",
+    a: "Yes — you get a print-ready 8.5\"×8.5\" PDF. Or upgrade to a real hardcover ($44.99, ships in 7–10 days) at checkout.",
   },
   {
     q: "Do you keep my kid's photo?",
