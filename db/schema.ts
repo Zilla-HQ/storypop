@@ -21,10 +21,13 @@ import { sql } from "drizzle-orm";
  * New tables: `prints` (Lulu jobs) and `book_pages` (per-page render
  * outputs + per-page cost tracking).
  *
- * Postgres schema name `relist` preserved for migration cleanliness;
- * rename in a follow-up once we're past template-fork stage.
+ * Postgres schema name `storypop` — isolates this merchant's tables in a
+ * fresh Supabase project. The merchant-template ancestor used `relist`
+ * (a real-estate fork name) but on a clean new DB we set the right name
+ * from the start. Override via DB_SCHEMA env if you need to point at an
+ * existing schema for migration purposes.
  */
-export const storypopSchema = pgSchema("relist");
+export const storypopSchema = pgSchema(process.env.DB_SCHEMA ?? "storypop");
 
 // ============ enums ============
 export const sourceEnum = storypopSchema.enum("listing_source", [
