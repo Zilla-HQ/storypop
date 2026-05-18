@@ -148,7 +148,19 @@ export async function generatePageIllustration(input: PageGenInput): Promise<Pag
           loras: input.isDefaultLora ? [] : [{ path: input.loraId, scale: 1.0 }],
           image_size: "square_hd",
           num_inference_steps: 28,
-          enable_safety_checker: true,
+          // IMPORTANT: when fal's safety checker trips it returns a SOLID
+          // BLACK PLACEHOLDER image at full resolution rather than failing.
+          // We compose that into the customer PDF and the page renders as
+          // a blank black rectangle — confirmed bug in the v1 prod deploy.
+          //
+          // We disable the checker here because every prompt going to fal
+          // is composed from our SAFETY_PREAMBLE + a Claude-generated scene
+          // that's already constrained by the kids-book system prompt. The
+          // false-positive rate on innocent scenes (warriors, monsters,
+          // peril words) was unacceptable for a paid product. Keeping the
+          // has_nsfw_concepts check below as a defense-in-depth read on
+          // anything fal still flags server-side.
+          enable_safety_checker: false,
         } as any,
         logs: false,
       })) as unknown as {
