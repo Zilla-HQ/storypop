@@ -85,15 +85,19 @@ export default function PreviewClient(props: Props) {
     return (
       <main className="container mx-auto max-w-3xl px-6 py-24 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-          Drawing {props.childName}&apos;s book…
+          {props.childName}&apos;s book is on the way
         </h1>
         <p className="mt-4 text-muted-foreground">
-          This takes about 5 minutes. You can leave the page open or close it —
-          I&apos;ll email {props.customerEmail || "you"} the preview when it&apos;s ready.
+          Your preview link will land in{" "}
+          <span className="font-medium text-slate-900">
+            {props.customerEmail || "your inbox"}
+          </span>{" "}
+          in about 5–10 minutes. Feel free to close this page — we&apos;ll deliver it
+          straight to your inbox, so keep an eye out there.
         </p>
-        <div className="mt-8 inline-block h-3 w-32 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full w-1/3 animate-pulse bg-[#FF6B9D]" />
-        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Tip: if you don&apos;t see it, check your spam folder.
+        </p>
       </main>
     );
   }
