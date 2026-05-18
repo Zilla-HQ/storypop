@@ -1,101 +1,209 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { UTMCapture } from "@/components/marketing/UTMCapture";
+import { MagicFlow } from "@/components/marketing/MagicFlow";
 
-export const dynamic = "force-dynamic";
+/**
+ * Landing page — port of storypop.shop's `/` so the v2 (Zilla-HQ template)
+ * marketing surface is visually indistinguishable from the v1 we tested
+ * with real customers. Same hero copy, gradient text, animated CTA glow,
+ * 10-tile sample grid, magic-flow explainer, testimonials, FAQ, final CTA.
+ *
+ * Where the two diverge:
+ *   - /create takes the user through the multi-step wizard (already
+ *     ported in app/(marketing)/create/create-form.tsx)
+ *   - /preview/[id] uses the v2 Drizzle + R2 + Inngest pipeline
+ */
 
-export default function HomePage() {
+export default function LandingPage() {
   return (
-    <main className="container mx-auto max-w-5xl px-6 py-20">
-      <header className="mx-auto max-w-3xl text-center">
-        <p className="text-sm font-medium uppercase tracking-widest text-[#FF6B9D]">
-          StoryPop
-        </p>
-        <h1 className="mt-4 text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl">
-          A book where your kid is the hero.
+    <main className="min-h-screen">
+      <UTMCapture />
+
+      {/* NAV */}
+      <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-5">
+        <Link href="/" className="flex items-center gap-2">
+          <img src="/logo.png" alt="Storypop" className="h-14 w-auto" />
+        </Link>
+        <Link href="/create" className="btn-primary text-sm">
+          Make a book
+        </Link>
+      </nav>
+
+      {/* HERO */}
+      <section className="relative max-w-6xl mx-auto px-6 pt-8 pb-16 text-center">
+        <span
+          className="hero-fade-up inline-block bg-sunshine/40 text-ink px-4 py-1 rounded-bubble text-sm font-bold mb-4 relative"
+          style={{ animationDelay: "0s" }}
+        >
+          12-page personalized book · printed-quality PDF · $9
+        </span>
+        <h1
+          className="hero-fade-up text-5xl md:text-7xl font-display font-black tracking-tight leading-[1.05] mb-6 relative"
+          style={{ animationDelay: "0.1s" }}
+        >
+          A storybook <br className="hidden md:block" />
+          <span className="text-magic">starring your kid</span>.
         </h1>
-        <p className="mt-6 text-lg text-muted-foreground">
-          Give us a first name, an age, and a story idea. Optionally upload a
-          photo. In about five minutes Pip writes and illustrates a personalized
-          16-page picture book starring your kid. PDF, softcover, or hardcover.
+        <p
+          className="hero-fade-up text-xl md:text-2xl text-ink/70 max-w-2xl mx-auto mb-8 relative"
+          style={{ animationDelay: "0.25s" }}
+        >
+          Tell us your kid&apos;s name, describe their personality, and name a few
+          things they love. We write &amp; illustrate a custom 12-page adventure
+          starring them. Ready in 2 minutes.{" "}
+          <span className="text-ink/50">Photo optional.</span>
         </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
+        <div
+          className="hero-fade-up flex flex-col sm:flex-row gap-3 justify-center mb-12 relative"
+          style={{ animationDelay: "0.4s" }}
+        >
+          <Link href="/create" className="btn-primary btn-magic text-lg px-8 py-4">
+            Start my book — $9
+          </Link>
+          <a href="#how" className="btn-secondary text-lg px-8 py-4">
+            See how it works
+          </a>
+        </div>
+
+        {/* Sample illustrations grid — 10 archetypes */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 max-w-6xl mx-auto">
+          {sampleSpreads.map((s) => (
+            <div key={s.title} className="tile bg-white rounded-bubble overflow-hidden shadow-soft">
+              <div className="aspect-square">
+                <img src={s.image} alt={s.title} className="w-full h-full object-cover" />
+              </div>
+              <div className="text-sm font-bold text-ink/80 text-center py-3 px-3">{s.title}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how" className="bg-white py-20">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-4xl md:text-5xl font-display font-black text-center mb-3">
+            How the magic happens
+          </h2>
+          <p className="text-center text-ink/60 max-w-xl mx-auto mb-10">
+            Three stages. Ninety seconds. Watch the magic flow.
+          </p>
+          <MagicFlow />
+        </div>
+      </section>
+
+      {/* SOCIAL PROOF */}
+      <section className="py-20 bg-cream">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h2 className="text-4xl font-display font-black mb-12">
+            Made for the bedtime hall of fame
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t) => (
+              <div key={t.name} className="card text-left">
+                <div className="text-2xl mb-2">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <span key={i} className="twinkle">
+                      ⭐
+                    </span>
+                  ))}
+                </div>
+                <p className="text-ink/80 mb-3">&ldquo;{t.quote}&rdquo;</p>
+                <div className="text-sm font-bold">— {t.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-20 bg-white">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-4xl font-display font-black text-center mb-12">Quick questions</h2>
+          <div className="space-y-4">
+            {faqs.map((f) => (
+              <details key={f.q} className="card cursor-pointer group">
+                <summary className="font-display font-black text-lg list-none flex justify-between">
+                  {f.q}
+                  <span className="text-coral group-open:rotate-45 transition">+</span>
+                </summary>
+                <p className="mt-3 text-ink/70">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="py-20 bg-coral text-white text-center">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-5xl font-display font-black mb-6">Make tonight magical.</h2>
+          <p className="text-xl mb-8 opacity-90">One book. Two minutes. Forever a memory.</p>
           <Link
             href="/create"
-            className="inline-flex items-center gap-2 rounded-full bg-[#FF6B9D] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[#FF6B9D]/30 transition hover:bg-[#e8588a]"
+            className="btn-magic inline-flex items-center justify-center rounded-bubble bg-white text-coral font-black px-8 py-4 text-lg shadow-soft hover:scale-[1.02] transition"
           >
-            <Sparkles className="h-5 w-5" />
-            Make their book
-          </Link>
-          <Link
-            href="/samples"
-            className="text-base font-medium text-slate-700 underline-offset-4 hover:underline"
-          >
-            See samples
+            Start my book — $9
           </Link>
         </div>
-      </header>
-
-      <section className="mt-24 grid gap-12 sm:grid-cols-3">
-        <Step
-          number="1"
-          title="Tell us about your kid"
-          body="Name, age, pronouns, and the kind of story you want — bedtime, adventure, first day of school, new sibling, lost tooth, birthday."
-        />
-        <Step
-          number="2"
-          title="Optional: upload a photo"
-          body="If you upload one, Pip locks the character to your kid's features across every page. If you don't, Pip picks a default character that matches their age."
-        />
-        <Step
-          number="3"
-          title="Preview free"
-          body="In about 5 minutes you see the first 3 pages free. If you love it, choose a format and we deliver the rest."
-        />
       </section>
 
-      <section className="mt-24 grid gap-6 sm:grid-cols-4">
-        <Tier name="Instant PDF" price="$14.99" desc="In your email in 5 minutes." />
-        <Tier name="Softcover" price="$29.99" desc="Printed, 5–8 days." />
-        <Tier name="Hardcover" price="$44.99" desc="Cloth-bound, 7–10 days." />
-        <Tier
-          name="Gift bundle"
-          price="$69.99"
-          desc="Hardcover + matching plush."
-        />
-      </section>
-
-      <footer className="mt-24 border-t pt-8 text-center text-sm text-muted-foreground">
-        <p>
-          StoryPop is a tool for parents and guardians. We never market to
-          children. Uploaded photos auto-purge after 30 days. See our{" "}
-          <Link href="/privacy" className="underline">
-            privacy policy
-          </Link>
-          .
-        </p>
+      <footer className="py-10 text-center text-ink/50 text-sm">
+        © {new Date().getFullYear()} Storypop · Made with love for big imaginations ·
+        storypop.shop
       </footer>
     </main>
   );
 }
 
-function Step({ number, title, body }: { number: string; title: string; body: string }) {
-  return (
-    <div>
-      <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#FFD166] font-bold text-slate-900">
-        {number}
-      </div>
-      <h3 className="mt-4 text-lg font-semibold text-slate-900">{title}</h3>
-      <p className="mt-2 text-muted-foreground">{body}</p>
-    </div>
-  );
-}
+const sampleSpreads = [
+  { title: "Jungle prince", image: "/samples/lion.jpg" },
+  { title: "Ice castle queen", image: "/samples/snow.jpg" },
+  { title: "Dragon rider", image: "/samples/dragon.jpg" },
+  { title: "Mermaid princess", image: "/samples/mermaid.jpg" },
+  { title: "Wizard student", image: "/samples/wizard.jpg" },
+  { title: "Space ranger", image: "/samples/space.jpg" },
+  { title: "Dinosaur friend", image: "/samples/dinosaur.jpg" },
+  { title: "Tiny superhero", image: "/samples/superhero.jpg" },
+  { title: "Fairy-tale royal", image: "/samples/fairytale.jpg" },
+  { title: "Backyard explorer", image: "/samples/backyard.jpg" },
+];
 
-function Tier({ name, price, desc }: { name: string; price: string; desc: string }) {
-  return (
-    <div className="rounded-2xl border bg-[#FFF8F0] p-6">
-      <p className="text-sm font-medium text-slate-500">{name}</p>
-      <p className="mt-2 text-2xl font-bold text-slate-900">{price}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
-    </div>
-  );
-}
+const testimonials = [
+  {
+    name: "Maya, mom of Luca (4)",
+    quote:
+      "Luca asked to read it three times in a row. He pointed at himself on every page. Worth every penny.",
+  },
+  {
+    name: "Dre, dad of twins",
+    quote:
+      "The fact that the kids look like THEM is what got me. My phone camera roll is 90% kid pics, may as well make a book.",
+  },
+  {
+    name: "Sara, gifting auntie",
+    quote: "Best birthday present I've ever sent. My niece thinks I'm a wizard now.",
+  },
+];
+
+const faqs = [
+  {
+    q: "How long does it take?",
+    a: "About 2 minutes from upload to preview. The full 12-page book is generated within 5 minutes after checkout.",
+  },
+  {
+    q: "What ages is this for?",
+    a: "Designed for kids ages 3–8. The story complexity adapts to the age you tell us.",
+  },
+  {
+    q: "Can I print it?",
+    a: "Yes — you get a print-ready 8.5\"×8.5\" PDF. Or upgrade to a real hardcover ($39, ships in 7–10 days) at checkout.",
+  },
+  {
+    q: "Do you keep my kid's photo?",
+    a: "No. Photos are auto-purged after 30 days of generation. We never train on your child's photo.",
+  },
+  {
+    q: "What if I don't like the result?",
+    a: "We'll regenerate it free, or refund within 7 days. We want this to be a happy memory.",
+  },
+];

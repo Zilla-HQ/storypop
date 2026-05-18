@@ -3,9 +3,33 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StoryPop — a book where your kid is the hero",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://storypop-hq.vercel.app"),
+  title: "Storypop — A storybook starring your kid",
   description:
-    "Personalized illustrated children's books. Tell us a name, age, and story idea — Pip writes and illustrates the whole book. Instant PDF, softcover, or hardcover.",
+    "Personalized AI-illustrated children's books. Upload one photo, type a name, get a 12-page magical story in 2 minutes. $9.",
+  openGraph: {
+    title: "Storypop — A storybook starring your kid",
+    description:
+      "Personalized AI-illustrated children's books. From one photo. In 2 minutes.",
+    type: "website",
+    url: "/",
+    siteName: "Storypop",
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "A child as the hero of their own storybook",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Storypop — A storybook starring your kid",
+    description:
+      "Personalized AI-illustrated children's books. From one photo. In 2 minutes.",
+    images: ["/og.jpg"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
