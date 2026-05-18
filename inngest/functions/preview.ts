@@ -130,6 +130,17 @@ export const generatePreview = inngest.createFunction(
       return inserted[0]?.id;
     });
 
+    // Denormalize previewPages onto the listings row too. fulfillment.ts
+    // reads listings.previewPages to decide which pages still need
+    // rendering — without this update it would re-render pages 0..2 after
+    // payment, double-charging in fal credits.
+    await step.run("denormalize-preview-pages", async () => {
+      await db
+        .update(listings)
+        .set({ previewPages, updatedAt: new Date() })
+        .where(eq(listings.id, bookId));
+    });
+
     await step.run("track-cost", () =>
       trackAgentCost("preview", character.estCostCents + 2 + FREE_PREVIEW_PAGES * 4),
     );
