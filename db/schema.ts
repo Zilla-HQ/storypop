@@ -87,7 +87,14 @@ export const listings = storypopSchema.table(
     childName: text("child_name").notNull(),
     childAge: integer("child_age").notNull(),
     pronouns: text("pronouns"), // "he/him" | "she/her" | "they/them"
-    archetype: archetypeEnum("archetype").notNull(),
+    archetype: archetypeEnum("archetype").notNull().default("adventure"),
+    /** Free-form parent description ("super silly, loves dinosaurs, gives the
+     *  best hugs"). Replaces the legacy enum-only archetype as the primary
+     *  personalization signal — Claude reads this directly. */
+    description: text("description"),
+    /** Free-form favorites ("Bluey, Frozen, dragons, space"). Claude maps
+     *  trademarked names → safe archetypes server-side. */
+    favorites: text("favorites"),
     photoUrl: text("photo_url"),
     photoExpiresAt: timestamp("photo_expires_at", { withTimezone: true }),
     stylePreset: stylePresetEnum("style_preset").notNull().default("picture-book-warm"),

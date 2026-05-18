@@ -72,6 +72,8 @@ export const generatePreview = inngest.createFunction(
         childAge: book.childAge as number,
         pronouns: (book.pronouns as string) ?? "they/them",
         archetype: book.archetype as string,
+        description: (book.description as string | null) ?? null,
+        favorites: (book.favorites as string | null) ?? null,
       }),
     );
 
