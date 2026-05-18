@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://storypop-hq.vercel.app"),
   title: "Storypop — A storybook starring your kid",
   description:
-    "Personalized AI-illustrated children's books. Upload one photo, type a name, get a 12-page magical story in 2 minutes. $9.",
+    "Personalized AI-illustrated children's books. Upload one photo, type a name, get a 16-page magical story in 2 minutes. $14.99.",
   openGraph: {
     title: "Storypop — A storybook starring your kid",
     description:
