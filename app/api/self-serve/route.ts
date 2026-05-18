@@ -79,10 +79,27 @@ export async function POST(req: NextRequest) {
         const buf = Buffer.from(await photo.arrayBuffer());
         try {
           await uploadToR2(key, buf, photo.type || "image/jpeg");
-          uploadedPhotoUrl = await signedR2Url(key, 60 * 60 * 24 * 30);
+          // AWS SigV4 caps presigned GET URLs at 7 days max. We previously
+          // requested 30 days here, which made signedR2Url() throw — the
+          // photo was uploaded successfully to R2 but the URL signing failed,
+          // photoUrl stayed null, and downstream lockCharacter() fell back
+          // to the default LoRA. Customer's actual kid never appeared in
+          // the book. 7 days is plenty: the preview Inngest function uses
+          // the URL within ~60s of submission to train the LoRA, after which
+          // the URL isn't read again.
+          uploadedPhotoUrl = await signedR2Url(key, 60 * 60 * 24 * 7);
+          console.log(
+            `[self-serve] photo uploaded: size=${buf.length} key=${key} url=${uploadedPhotoUrl.slice(0, 80)}...`,
+          );
         } catch (err) {
-          // Non-fatal: proceed without photo (text-only generation works).
-          console.warn("[self-serve] photo upload to R2 failed:", err);
+          // LOUD log so the team can see this in Vercel runtime logs. Earlier
+          // this was a silent warn() and we shipped books with no photo —
+          // customer reported the kid in their book wasn't theirs. The fact
+          // that this is non-fatal (book still generates with a default
+          // character) is correct, but the operator MUST be able to see
+          // when it happens.
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[self-serve] R2 photo upload FAILED — bytes=${buf.length} bucket=storypop-books key=${key} err=${msg}`);
         }
       }
     } else {

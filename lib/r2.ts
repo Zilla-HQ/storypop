@@ -40,9 +40,21 @@ export async function uploadToR2(
   );
 }
 
-export async function signedR2Url(key: string, expiresInSeconds = 60 * 60 * 24 * 7): Promise<string> {
+/** AWS SigV4 caps presigned URLs at 7 days. Any value above throws. */
+const MAX_PRESIGN_SECONDS = 7 * 24 * 60 * 60;
+
+export async function signedR2Url(key: string, expiresInSeconds = MAX_PRESIGN_SECONDS): Promise<string> {
   // If R2 bucket is fronted by a public domain, prefer that for reads.
   if (publicUrl) return `${publicUrl.replace(/\/$/, "")}/${key}`;
+  if (expiresInSeconds > MAX_PRESIGN_SECONDS) {
+    // Clamp + warn. Previously a caller asking for 30 days would silently
+    // throw inside getSignedUrl and the catching code would discard the
+    // photo (real customer-impact bug — see comments in /api/self-serve).
+    console.warn(
+      `[r2] signedR2Url asked for ${expiresInSeconds}s but max is ${MAX_PRESIGN_SECONDS}s (7d); clamping.`,
+    );
+    expiresInSeconds = MAX_PRESIGN_SECONDS;
+  }
   const c = requireClient();
   return getSignedUrl(
     c,
