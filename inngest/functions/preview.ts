@@ -102,6 +102,14 @@ export const generatePreview = inngest.createFunction(
             stylePreset,
             pageNumber: i,
             childName: book.childName as string,
+            // NOTE: previously requested quality:"hero" (40-step pulid) but
+            // that exceeded Inngest's per-step timeout on prod — books got
+            // stuck at 0 pages for 30+ min. Standard 20-step pulid finishes
+            // a 3-page preview in ~90s. Better-illustration quality is now
+            // driven by the richer sceneDescription prompts in lib/claude.ts
+            // (action + companions + varied composition) rather than more
+            // inference steps.
+            quality: "standard",
           }),
         );
         const r2Key = `books/${bookId}/pages/${i}.png`;

@@ -12,7 +12,9 @@ interface Props {
   archetype: string;
   ready: boolean;
   title: string | null;
-  pages: { pageNumber: number; url: string }[];
+  dedication: string | null;
+  pages: { pageNumber: number; url: string; body: string }[];
+  nextPageTeaser: string | null;
   lockedPageCount: number;
   customerEmail: string;
 }
@@ -112,32 +114,65 @@ export default function PreviewClient(props: Props) {
         </p>
       </header>
 
-      <section className="mt-12 grid gap-6 sm:grid-cols-3">
-        {props.pages.map((p) => (
+      {props.dedication && (
+        <p className="mt-4 text-center italic text-slate-600">
+          &ldquo;{props.dedication}&rdquo;
+        </p>
+      )}
+
+      {/* Spread layout: image left, page text right (alternates on mobile).
+          Bigger images, real story text — the customer is judging the writing
+          AND the art, so show both. */}
+      <section className="mt-10 space-y-6">
+        {props.pages.map((p, idx) => (
           <figure
             key={p.pageNumber}
-            className="overflow-hidden rounded-2xl border bg-white shadow-sm"
+            className={`overflow-hidden rounded-2xl border bg-white shadow-sm md:flex ${
+              idx % 2 === 1 ? "md:flex-row-reverse" : ""
+            }`}
           >
             <img
               src={p.url}
               alt={`Page ${p.pageNumber + 1}`}
-              className="aspect-square w-full object-cover"
+              className="aspect-square w-full md:w-1/2"
             />
-            <figcaption className="px-3 py-2 text-xs text-muted-foreground">
-              Page {p.pageNumber + 1} of {props.pages.length + props.lockedPageCount}
+            <figcaption className="flex flex-col justify-center gap-3 p-6 md:w-1/2 md:p-10">
+              <div className="text-xs font-bold uppercase tracking-widest text-[#FF6B9D]">
+                Page {p.pageNumber + 1}
+                <span className="ml-2 font-normal text-slate-400">
+                  of {props.pages.length + props.lockedPageCount}
+                </span>
+              </div>
+              <p className="text-lg leading-relaxed text-slate-900 sm:text-xl">
+                {p.body}
+              </p>
             </figcaption>
           </figure>
         ))}
       </section>
 
+      {/* Teaser of page 4 — a blurred sneak so the customer feels what's
+          on the other side of the paywall. Drives the buy CTA below. */}
       {props.lockedPageCount > 0 && (
-        <section className="mt-8 rounded-2xl border-2 border-dashed border-[#FF6B9D]/40 bg-white p-6 text-center">
-          <p className="text-lg font-semibold text-slate-900">
-            +{props.lockedPageCount} more pages waiting
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pick a format below to see the rest.
-          </p>
+        <section className="relative mt-8 overflow-hidden rounded-2xl border-2 border-dashed border-[#FF6B9D]/40 bg-white p-8">
+          {props.nextPageTeaser && (
+            <div className="relative">
+              <div className="text-xs font-bold uppercase tracking-widest text-[#FF6B9D]">
+                Page {props.pages.length + 1} · locked
+              </div>
+              <p className="mt-3 select-none text-lg italic leading-relaxed text-slate-900 blur-[6px]">
+                {props.nextPageTeaser}
+              </p>
+            </div>
+          )}
+          <div className="mt-6 flex flex-col items-center text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#FF6B9D] px-5 py-2 text-sm font-bold text-white">
+              🔒 +{props.lockedPageCount} more pages waiting
+            </span>
+            <p className="mt-3 text-sm text-slate-500">
+              Pick a format below — we deliver the rest immediately.
+            </p>
+          </div>
         </section>
       )}
 

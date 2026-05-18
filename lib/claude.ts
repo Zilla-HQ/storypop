@@ -90,18 +90,27 @@ export async function draftStory(args: {
 - Spider-Man / Avengers / Star Wars / Harry Potter → kid-sized superhero web-swinging / team of kid heroes / brave young space-knight + droids / magical castle-school
 Animals & themes (dinosaurs, dragons, mermaids, unicorns, princesses, knights, pirates, space, wizards, superheroes, horses, trains, cars and trucks, robots, ninjas, monsters) → use literally.`;
 
-  const system = `You are a children's book author. Draft a ${pageCount}-page story for the given inputs.
-Every page is 1-3 sentences and ends with a beat that gives the illustrator a clear scene.
+  const system = `You are a children's book author and art director. Draft a ${pageCount}-page story for the given inputs. Both the prose AND the per-page illustration brief matter — the illustration is what sells the book.
 Respect age-band reading level: ${ageBand}.
 Output STRICT JSON: { "title": string, "dedication": string, "pages": [{ "sceneDescription": string, "body": string }] }.
 No commentary, no markdown, just JSON.
 
-HARD RULES:
+ILLUSTRATION COMPOSITION (the conversion-critical part)
+Each sceneDescription is a brief for one full-bleed picture-book spread. NEVER describe just the child standing alone — that's a boring landing-page sample and customers don't buy. Every spread MUST include:
+  1. A clear ACTION the child is doing (running, leaping, hiding, baking, painting, riding, climbing, casting a spell, hugging, sleeping, peeking, splashing, dancing).
+  2. At least ONE companion or interactive scene element BESIDE the child — a friendly animal, magical creature, sibling, parent, pet, glowing object, vehicle, friend. Never just the kid in an empty environment.
+  3. A specific camera/composition cue that differs from prior pages. Cycle through: wide establishing shot, low-angle hero shot, close-up emotion, over-the-shoulder POV, action mid-leap, quiet bedtime moment, shared-laugh moment, peeking-around-corner moment.
+  4. Concrete, visual sensory detail — colors, textures, weather, time of day, what the child is wearing, what they're holding. NOT abstractions.
+  5. Vary the setting page-to-page. A 16-page story has 6-10 distinct scene-environments. NEVER repeat backgrounds 3 pages in a row.
+
+PROSE
+Each page body is 1-3 sentences (age-band ${ageBand}) and ends with a beat that hands the illustrator a clear scene. Use the child's name on most pages (not every page — feels forced). Build an arc: ordinary world → call to adventure → meet a friend/companion → small obstacle → child's trait saves the day → warm resolution. Bedtime archetype ends with the protagonist asleep.
+
+HARD RULES
 - The hero is ALWAYS a HUMAN CHILD. Never an animal or non-human creature; any animals appear as companions BESIDE the child, never AS the child.
 - No violence beyond mild peril. No romance/sexuality. No real-world political figures.
 - NEVER name copyrighted characters, places, or songs (Disney, Marvel, Pokémon, Bluey, Paw Patrol, Sesame Street, Frozen's Elsa, etc). Use generic archetypes.
 - No weapons, no substance use, no scary monsters with realistic features.
-- Bedtime archetype ends with the protagonist asleep.
 
 ${translationMap}`;
 

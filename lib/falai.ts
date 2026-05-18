@@ -108,6 +108,13 @@ export interface PageGenInput {
   pageNumber: number;
   /** Child's first name — included so any in-prompt naming stays consistent. */
   childName: string;
+  /**
+   * 'hero' bumps inference steps (40 vs 20) — the customer judges the
+   * whole book on these 3 preview frames so we burn the extra cost to
+   * make them look 2x more detailed. Defaults to 'standard'. fulfillment.ts
+   * uses 'standard' for the remaining 13 pages.
+   */
+  quality?: "standard" | "hero";
 }
 
 export interface PageGenResult {
@@ -154,6 +161,7 @@ export async function generatePageIllustration(input: PageGenInput): Promise<Pag
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let out: { data: { images: { url: string }[]; has_nsfw_concepts?: boolean[] } };
 
+      const isHero = input.quality === "hero";
       if (!input.isDefaultLora && input.loraId.startsWith("http")) {
         // Photo path — flux-pulid with the customer's photo as identity ref.
         out = (await fal.subscribe("fal-ai/flux-pulid", {
@@ -161,9 +169,11 @@ export async function generatePageIllustration(input: PageGenInput): Promise<Pag
             prompt: usedPrompt,
             reference_image_url: input.loraId,
             image_size: "square_hd",
-            num_inference_steps: 20,
-            guidance_scale: 4,
-            true_cfg: 1.5,
+            // Hero: 40 steps + slightly higher guidance for sharper detail.
+            // Standard: 20 steps for the post-payment fulfillment loop.
+            num_inference_steps: isHero ? 40 : 20,
+            guidance_scale: isHero ? 4.5 : 4,
+            true_cfg: isHero ? 1.6 : 1.5,
             id_weight: 1.0,
             // safety_checker disabled — it returns SOLID BLACK images for
             // false positives on innocent kid scenes (warriors, monsters,
@@ -173,12 +183,13 @@ export async function generatePageIllustration(input: PageGenInput): Promise<Pag
           logs: false,
         })) as never;
       } else {
-        // No-photo path — flux/dev text-only.
-        out = (await fal.subscribe("fal-ai/flux/dev", {
+        // No-photo path — flux/dev for hero (28 steps), flux/schnell standard.
+        const model = isHero ? "fal-ai/flux/dev" : "fal-ai/flux/schnell";
+        out = (await fal.subscribe(model, {
           input: {
             prompt: usedPrompt,
             image_size: "square_hd",
-            num_inference_steps: 28,
+            num_inference_steps: isHero ? 28 : 4,
             num_images: 1,
             enable_safety_checker: false,
           } as any,

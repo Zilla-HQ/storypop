@@ -29,7 +29,12 @@ export default async function PreviewPage({ params }: PageProps) {
   // If the preview hasn't finished generating yet, show the polling state.
   const ready = Boolean(preview);
 
-  // Sign R2 URLs for the visible pages (1-3) so the client can render them.
+  // Sign R2 URLs for the visible pages (1-3) AND pair them with their
+  // story body text. Earlier we only passed the URL — the customer saw
+  // 3 images of a kid with no story text and couldn't read what the
+  // book actually says. Pass body text + an excerpt of the next-page
+  // body so they get a real taste of the writing.
+  const storyPages = preview?.payload.story.pages ?? [];
   const signedPages = ready
     ? await Promise.all(
         preview.payload.previewPages
@@ -37,6 +42,7 @@ export default async function PreviewPage({ params }: PageProps) {
           .map(async (p) => ({
             pageNumber: p.pageNumber,
             url: await signedR2Url(p.r2Key, 60 * 60),
+            body: storyPages[p.pageNumber]?.body ?? "",
           })),
       )
     : [];
@@ -49,7 +55,11 @@ export default async function PreviewPage({ params }: PageProps) {
       archetype={book.archetype}
       ready={ready}
       title={preview?.payload.story.title ?? null}
+      dedication={preview?.payload.story.dedication ?? null}
       pages={signedPages}
+      // First snippet of one locked page — tease so the customer sees
+      // the writing voice continues past the unlocked previews.
+      nextPageTeaser={storyPages[3]?.body ?? null}
       lockedPageCount={
         ready ? Math.max(0, preview.payload.story.pages.length - signedPages.length) : 13
       }
